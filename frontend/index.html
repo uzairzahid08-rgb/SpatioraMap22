@@ -1,0 +1,2985 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>SpatioraMap</title>
+
+
+    <!-- =========================
+         LEAFLET CSS
+    ========================= -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+
+    <!-- =========================
+         GEOMAN CSS
+    ========================= -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.css"
+    >
+
+
+    <style>
+
+        /* =====================================================
+           GLOBAL
+        ===================================================== */
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        html,
+        body {
+
+            margin: 0;
+            padding: 0;
+
+            width: 100%;
+            height: 100%;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: #f4f7fb;
+
+            color: #172033;
+
+            overflow: hidden;
+        }
+
+
+        /* =====================================================
+           MAP
+        ===================================================== */
+
+        #map {
+
+            position: absolute;
+
+            top: 0;
+            right: 0;
+            bottom: 0;
+
+            left: 330px;
+        }
+
+
+        /* =====================================================
+           SIDEBAR
+        ===================================================== */
+
+        #sidebar {
+
+            position: absolute;
+
+            top: 0;
+            left: 0;
+            bottom: 0;
+
+            width: 330px;
+
+            min-width: 260px;
+            max-width: 520px;
+
+            background: #ffffff;
+
+            z-index: 1000;
+
+            box-shadow:
+                3px 0 18px
+                rgba(15, 23, 42, 0.13);
+
+            overflow-y: auto;
+            overflow-x: hidden;
+
+            border-right:
+                1px solid #dfe5ec;
+        }
+
+
+        /* =====================================================
+           RESIZE HANDLE
+        ===================================================== */
+
+        #resizeHandle {
+
+            position: absolute;
+
+            top: 0;
+            right: -3px;
+            bottom: 0;
+
+            width: 8px;
+
+            cursor: col-resize;
+
+            z-index: 3000;
+
+            background: transparent;
+        }
+
+
+        #resizeHandle:hover {
+
+            background:
+                rgba(11, 31, 58, 0.15);
+        }
+
+
+        body.resizing {
+
+            cursor: col-resize;
+
+            user-select: none;
+        }
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        .sidebar-header {
+
+            padding:
+                22px 20px 16px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0b1f3a,
+                    #173a66
+                );
+
+            color: #ffffff;
+        }
+
+
+        .brand {
+
+            font-size: 23px;
+
+            font-weight: 700;
+
+            margin-bottom: 5px;
+        }
+
+
+        .subtitle {
+
+            font-size: 12px;
+
+            opacity: 0.78;
+
+            line-height: 1.4;
+        }
+
+
+        /* =====================================================
+           DASHBOARD
+        ===================================================== */
+
+        .dashboard {
+
+            padding: 15px;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 9px;
+
+            background: #f5f7fa;
+        }
+
+
+        .stat-card {
+
+            background: #ffffff;
+
+            border:
+                1px solid #e3e8ef;
+
+            border-radius: 9px;
+
+            padding: 11px;
+
+            box-shadow:
+                0 2px 7px
+                rgba(15, 23, 42, 0.04);
+        }
+
+
+        .stat-label {
+
+            font-size: 11px;
+
+            color: #667085;
+
+            margin-bottom: 5px;
+        }
+
+
+        .stat-value {
+
+            font-size: 20px;
+
+            font-weight: 700;
+
+            color: #0b1f3a;
+        }
+
+
+        /* =====================================================
+           SECTIONS
+        ===================================================== */
+
+        .section {
+
+            padding: 15px;
+        }
+
+
+        .section-title {
+
+            font-size: 14px;
+
+            font-weight: 700;
+
+            color: #172033;
+
+            margin-bottom: 10px;
+        }
+
+
+        /* =====================================================
+           DOWNLOAD
+        ===================================================== */
+
+        #downloadBtn {
+
+            width: 100%;
+
+            padding:
+                10px 12px;
+
+            border: none;
+
+            border-radius: 7px;
+
+            background: #0b1f3a;
+
+            color: #ffffff;
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+
+        #downloadBtn:hover {
+
+            background: #173a66;
+        }
+
+
+        /* =====================================================
+           SEARCH
+        ===================================================== */
+
+        #searchBox {
+
+            width: 100%;
+
+            padding:
+                9px 10px;
+
+            border:
+                1px solid #d8dee8;
+
+            border-radius: 7px;
+
+            outline: none;
+
+            font-size: 12px;
+
+            margin-bottom: 8px;
+        }
+
+
+        #searchBox:focus {
+
+            border-color: #5d7ea8;
+
+            box-shadow:
+                0 0 0 2px
+                rgba(93, 126, 168, 0.10);
+        }
+
+
+        /* =====================================================
+           FILTERS
+        ===================================================== */
+
+        .filter-row {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 7px;
+
+            margin-bottom: 10px;
+        }
+
+
+        .filter-select {
+
+            width: 100%;
+
+            padding: 8px;
+
+            border:
+                1px solid #d8dee8;
+
+            border-radius: 7px;
+
+            background: #ffffff;
+
+            color: #344054;
+
+            font-size: 11px;
+
+            outline: none;
+        }
+
+
+        /* =====================================================
+           FEATURE LIST
+        ===================================================== */
+
+        #featureList {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 8px;
+        }
+
+
+        .feature-item {
+
+            border:
+                1px solid #e0e5ec;
+
+            border-radius: 8px;
+
+            padding: 10px;
+
+            background: #ffffff;
+
+            cursor: pointer;
+
+            transition:
+                0.15s ease;
+        }
+
+
+        .feature-item:hover {
+
+            border-color: #aebdce;
+
+            box-shadow:
+                0 3px 10px
+                rgba(15, 23, 42, 0.07);
+        }
+
+
+        .feature-name {
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            color: #172033;
+
+            margin-bottom: 4px;
+
+            word-break: break-word;
+        }
+
+
+        .feature-meta {
+
+            font-size: 10px;
+
+            color: #667085;
+
+            line-height: 1.5;
+        }
+
+
+        .feature-actions {
+
+            display: flex;
+
+            gap: 5px;
+
+            margin-top: 8px;
+        }
+
+
+        .feature-actions button {
+
+            flex: 1;
+
+            padding: 6px 5px;
+
+            border:
+                1px solid #d5dbe4;
+
+            border-radius: 5px;
+
+            background: #f8fafc;
+
+            font-size: 10px;
+
+            cursor: pointer;
+        }
+
+
+        .feature-actions button:hover {
+
+            background: #eef2f6;
+        }
+
+
+        .empty-message {
+
+            text-align: center;
+
+            padding: 20px 10px;
+
+            color: #98a2b3;
+
+            font-size: 11px;
+        }
+
+
+        /* =====================================================
+           GEOMAN TOOLBAR
+           
+           CLEAN FLOATING TOOLBAR
+        ===================================================== */
+
+        .leaflet-pm-toolbar {
+
+            background:
+                #ffffff !important;
+
+            border:
+                1px solid #d8dee8 !important;
+
+            border-radius:
+                9px !important;
+
+            padding:
+                6px !important;
+
+            box-shadow:
+                0 4px 14px
+                rgba(15, 23, 42, 0.16) !important;
+
+            overflow:
+                visible !important;
+
+            width:
+                46px !important;
+
+            min-width:
+                46px !important;
+
+            transform:
+                none !important;
+        }
+
+
+        /* Make every button container separate */
+
+        .leaflet-pm-toolbar
+        .button-container {
+
+            margin:
+                0 !important;
+
+            padding:
+                0 !important;
+
+            background:
+                transparent !important;
+
+            border:
+                none !important;
+
+            box-shadow:
+                none !important;
+
+            width:
+                100% !important;
+        }
+
+
+        /* Actual Geoman buttons */
+
+        .leaflet-pm-toolbar
+        .button-container a {
+
+            display:
+                flex !important;
+
+            align-items:
+                center !important;
+
+            justify-content:
+                center !important;
+
+            width:
+                34px !important;
+
+            height:
+                34px !important;
+
+            margin:
+                0 auto 6px auto !important;
+
+            padding:
+                0 !important;
+
+            background:
+                #ffffff !important;
+
+            border:
+                1px solid #d5dbe4 !important;
+
+            border-radius:
+                6px !important;
+
+            box-shadow:
+                0 1px 3px
+                rgba(15, 23, 42, 0.12) !important;
+
+            text-decoration:
+                none !important;
+
+            transition:
+                background 0.15s ease,
+                border-color 0.15s ease,
+                box-shadow 0.15s ease !important;
+        }
+
+
+        /* Last button no bottom gap */
+
+        .leaflet-pm-toolbar
+        .button-container:last-child a {
+
+            margin-bottom:
+                0 !important;
+        }
+
+
+        /* Hover */
+
+        .leaflet-pm-toolbar
+        .button-container a:hover {
+
+            background:
+                #f1f5f9 !important;
+
+            border-color:
+                #aebdce !important;
+
+            box-shadow:
+                0 2px 6px
+                rgba(15, 23, 42, 0.18) !important;
+        }
+
+
+        /* Active button */
+
+        .leaflet-pm-toolbar
+        .button-container a.active {
+
+            background:
+                #e7eef7 !important;
+
+            border-color:
+                #7f9bbd !important;
+        }
+
+
+        /* Geoman icon */
+
+        .leaflet-pm-toolbar
+        .control-icon {
+
+            width:
+                32px !important;
+
+            height:
+                32px !important;
+
+            display:
+                block !important;
+
+            background-color:
+                transparent !important;
+
+            background-repeat:
+                no-repeat !important;
+
+            background-position:
+                center !important;
+
+            background-size:
+                20px 20px !important;
+
+            border:
+                none !important;
+
+            box-shadow:
+                none !important;
+        }
+
+
+        /* Keep Leaflet's icon images */
+
+        .leaflet-pm-toolbar
+        .button-container a[class*="leaflet-pm-icon"] {
+
+            background-color:
+                #ffffff !important;
+        }
+
+
+        /* =====================================================
+           POPUP
+        ===================================================== */
+
+        .popup-title {
+
+            font-weight: 700;
+
+            color: #0b1f3a;
+
+            margin-bottom: 7px;
+        }
+
+
+        .popup-row {
+
+            font-size: 11px;
+
+            margin-bottom: 4px;
+
+            color: #475467;
+        }
+
+
+        /* =====================================================
+           MODAL
+        ===================================================== */
+
+        .modal {
+
+            position: fixed;
+
+            inset: 0;
+
+            background:
+                rgba(15, 23, 42, 0.45);
+
+            display: none;
+
+            align-items: center;
+
+            justify-content: center;
+
+            z-index: 5000;
+        }
+
+
+        .modal-content {
+
+            width:
+                min(
+                    430px,
+                    calc(100vw - 30px)
+                );
+
+            background: #ffffff;
+
+            border-radius: 11px;
+
+            box-shadow:
+                0 20px 50px
+                rgba(0, 0, 0, 0.20);
+
+            overflow: hidden;
+        }
+
+
+        .modal-header {
+
+            padding:
+                15px 18px;
+
+            background:
+                #0b1f3a;
+
+            color: #ffffff;
+
+            font-size: 15px;
+
+            font-weight: 700;
+        }
+
+
+        .modal-body {
+
+            padding: 18px;
+        }
+
+
+        .form-group {
+
+            margin-bottom: 13px;
+        }
+
+
+        .form-group label {
+
+            display: block;
+
+            font-size: 11px;
+
+            font-weight: 600;
+
+            color: #344054;
+
+            margin-bottom: 5px;
+        }
+
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+
+            width: 100%;
+
+            border:
+                1px solid #d8dee8;
+
+            border-radius: 7px;
+
+            padding: 9px;
+
+            font-size: 12px;
+
+            outline: none;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        }
+
+
+        .form-group textarea {
+
+            min-height: 75px;
+
+            resize: vertical;
+        }
+
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+
+            border-color:
+                #5d7ea8;
+
+            box-shadow:
+                0 0 0 2px
+                rgba(93, 126, 168, 0.10);
+        }
+
+
+        .modal-actions {
+
+            display: flex;
+
+            justify-content: flex-end;
+
+            gap: 8px;
+
+            padding-top: 5px;
+        }
+
+
+        .modal-btn {
+
+            padding:
+                8px 15px;
+
+            border-radius: 6px;
+
+            border: none;
+
+            font-size: 11px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+
+        .btn-cancel {
+
+            background:
+                #eef1f5;
+
+            color: #344054;
+        }
+
+
+        .btn-save {
+
+            background:
+                #0b1f3a;
+
+            color: #ffffff;
+        }
+
+
+        .btn-save:hover {
+
+            background:
+                #173a66;
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 700px) {
+
+            #sidebar {
+
+                width: 280px;
+
+                min-width: 240px;
+            }
+
+            #map {
+
+                left: 280px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ===================================================== -->
+
+    <div id="sidebar">
+
+
+        <div class="sidebar-header">
+
+            <div class="brand">
+                SpatioraMap
+            </div>
+
+            <div class="subtitle">
+                Mini GIS Digitizing Application
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             DASHBOARD
+        ================================================== -->
+
+        <div class="dashboard">
+
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Total Features
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="totalFeatures"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Points
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="totalPoints"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Lines
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="totalLines"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Polygons
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="totalPolygons"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Active
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="totalActive"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-label">
+                    Inactive
+                </div>
+
+                <div
+                    class="stat-value"
+                    id="totalInactive"
+                >
+                    0
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             DOWNLOAD
+        ================================================== -->
+
+        <div class="section">
+
+            <button
+                id="downloadBtn"
+                onclick="downloadData()"
+            >
+                ⬇ Download SHP + Attributes
+            </button>
+
+        </div>
+
+
+        <!-- =================================================
+             FEATURE LIST
+        ================================================== -->
+
+        <div class="section">
+
+
+            <div class="section-title">
+                Saved Features
+            </div>
+
+
+            <input
+                type="text"
+                id="searchBox"
+                placeholder="Search features..."
+                oninput="applyFilters()"
+            >
+
+
+            <div class="filter-row">
+
+
+                <select
+                    id="geometryFilter"
+                    class="filter-select"
+                    onchange="applyFilters()"
+                >
+
+                    <option value="all">
+                        All Geometry Types
+                    </option>
+
+                    <option value="Point">
+                        Points
+                    </option>
+
+                    <option value="LineString">
+                        Lines
+                    </option>
+
+                    <option value="Polygon">
+                        Polygons
+                    </option>
+
+                </select>
+
+
+                <select
+                    id="statusFilter"
+                    class="filter-select"
+                    onchange="applyFilters()"
+                >
+
+                    <option value="all">
+                        All Status
+                    </option>
+
+                    <option value="Active">
+                        Active
+                    </option>
+
+                    <option value="Inactive">
+                        Inactive
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div id="featureList">
+
+                <div class="empty-message">
+                    No features saved yet.
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div id="resizeHandle"></div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAP
+    ===================================================== -->
+
+    <div id="map"></div>
+
+
+    <!-- =====================================================
+         ATTRIBUTE MODAL
+    ===================================================== -->
+
+    <div
+        id="attributeModal"
+        class="modal"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+                Feature Attributes
+            </div>
+
+
+            <div class="modal-body">
+
+
+                <div class="form-group">
+
+                    <label>
+                        Geometry Type
+                    </label>
+
+                    <input
+                        type="text"
+                        id="geometryType"
+                        readonly
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Name *
+                    </label>
+
+                    <input
+                        type="text"
+                        id="featureName"
+                        placeholder="Enter feature name"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Type *
+                    </label>
+
+                    <input
+                        type="text"
+                        id="assetType"
+                        placeholder="e.g. Road, Building, River"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Description
+                    </label>
+
+                    <textarea
+                        id="description"
+                        placeholder="Optional description"
+                    ></textarea>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Status
+                    </label>
+
+                    <select id="status">
+
+                        <option value="Active">
+                            Active
+                        </option>
+
+                        <option value="Inactive">
+                            Inactive
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="modal-actions">
+
+
+                    <button
+                        class="modal-btn btn-cancel"
+                        onclick="closeModal()"
+                    >
+                        Cancel
+                    </button>
+
+
+                    <button
+                        class="modal-btn btn-save"
+                    >
+                        Save Feature
+                    </button>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         LEAFLET JS
+    ===================================================== -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    ></script>
+
+
+    <!-- =====================================================
+         GEOMAN JS
+    ===================================================== -->
+
+    <script
+        src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js"
+    ></script>
+
+
+    <script>
+
+        /* =====================================================
+           MAP
+        ===================================================== */
+
+        const map =
+            L.map(
+                "map"
+            ).setView(
+                [34.0151, 71.5249],
+                10
+            );
+
+
+        /* =====================================================
+           BASEMAPS
+        ===================================================== */
+
+        const osm =
+            L.tileLayer(
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+
+                    maxZoom: 19,
+
+                    attribution:
+                        "&copy; OpenStreetMap contributors"
+
+                }
+            );
+
+
+        const satellite =
+            L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {
+
+                    maxZoom: 19,
+
+                    attribution:
+                        "Tiles &copy; Esri"
+
+                }
+            );
+
+
+        osm.addTo(map);
+
+
+        /* =====================================================
+           BASEMAP CONTROL
+        ===================================================== */
+
+        L.control.layers(
+
+            {
+
+                "OpenStreetMap":
+                    osm,
+
+                "Satellite":
+                    satellite
+
+            },
+
+            null,
+
+            {
+
+                position:
+                    "topright"
+
+            }
+
+        ).addTo(map);
+
+
+        /* =====================================================
+           VARIABLES
+        ===================================================== */
+
+        let allFeatures = [];
+
+        let pendingLayer = null;
+
+        let editingFeatureId = null;
+
+        let editingLayer = null;
+
+
+        /* =====================================================
+           GEOMAN
+        ===================================================== */
+
+        map.pm.addControls({
+
+            position:
+                "topleft",
+
+            drawMarker:
+                true,
+
+            drawPolyline:
+                true,
+
+            drawPolygon:
+                true,
+
+            drawCircle:
+                false,
+
+            drawCircleMarker:
+                false,
+
+            drawRectangle:
+                false,
+
+            drawText:
+                false,
+
+            editMode:
+                true,
+
+            dragMode:
+                false,
+
+            cutPolygon:
+                false,
+
+            removalMode:
+                false
+
+        });
+
+
+        /* =====================================================
+           CREATE
+        ===================================================== */
+
+        map.on(
+            "pm:create",
+            function(event) {
+
+                const layer =
+                    event.layer;
+
+                const shape =
+                    event.shape;
+
+
+                if (
+
+                    shape !== "Marker" &&
+                    shape !== "Line" &&
+                    shape !== "Polygon"
+
+                ) {
+
+                    map.removeLayer(
+                        layer
+                    );
+
+                    return;
+                }
+
+
+                pendingLayer =
+                    layer;
+
+
+                let geometryType;
+
+
+                if (
+                    shape === "Marker"
+                ) {
+
+                    geometryType =
+                        "Point";
+
+                }
+
+                else if (
+                    shape === "Line"
+                ) {
+
+                    geometryType =
+                        "LineString";
+
+                }
+
+                else {
+
+                    geometryType =
+                        "Polygon";
+
+                }
+
+
+                document.getElementById(
+                    "geometryType"
+                ).value =
+                    geometryType;
+
+
+                document.getElementById(
+                    "featureName"
+                ).value = "";
+
+
+                document.getElementById(
+                    "assetType"
+                ).value = "";
+
+
+                document.getElementById(
+                    "description"
+                ).value = "";
+
+
+                document.getElementById(
+                    "status"
+                ).value =
+                    "Active";
+
+
+                editingFeatureId =
+                    null;
+
+
+                document.querySelector(
+                    ".btn-save"
+                ).textContent =
+                    "Save Feature";
+
+
+                document.getElementById(
+                    "attributeModal"
+                ).style.display =
+                    "flex";
+
+            }
+        );
+
+
+        /* =====================================================
+           CLOSE MODAL
+        ===================================================== */
+
+        function closeModal() {
+
+            document.getElementById(
+                "attributeModal"
+            ).style.display =
+                "none";
+
+
+            if (
+                pendingLayer
+            ) {
+
+                map.removeLayer(
+                    pendingLayer
+                );
+
+                pendingLayer =
+                    null;
+            }
+
+
+            if (
+                editingLayer
+            ) {
+
+                map.removeLayer(
+                    editingLayer
+                );
+
+                editingLayer =
+                    null;
+
+                editingFeatureId =
+                    null;
+            }
+
+
+            document.querySelector(
+                ".btn-save"
+            ).textContent =
+                "Save Feature";
+
+        }
+
+
+        /* =====================================================
+           GEOJSON
+        ===================================================== */
+
+        function layerToGeoJSON(
+            layer
+        ) {
+
+            return layer
+                .toGeoJSON()
+                .geometry;
+
+        }
+
+
+        /* =====================================================
+           SAVE
+        ===================================================== */
+
+        async function saveFeature() {
+
+            if (
+                !pendingLayer
+            ) {
+
+                return;
+            }
+
+
+            const name =
+                document.getElementById(
+                    "featureName"
+                ).value.trim();
+
+
+            const assetType =
+                document.getElementById(
+                    "assetType"
+                ).value.trim();
+
+
+            const description =
+                document.getElementById(
+                    "description"
+                ).value.trim();
+
+
+            const status =
+                document.getElementById(
+                    "status"
+                ).value;
+
+
+            const geometryType =
+                document.getElementById(
+                    "geometryType"
+                ).value;
+
+
+            if (
+                !name ||
+                !assetType
+            ) {
+
+                alert(
+                    "Please enter Name and Type."
+                );
+
+                return;
+            }
+
+
+            const geometry =
+                layerToGeoJSON(
+                    pendingLayer
+                );
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/features",
+                        {
+
+                            method:
+                                "POST",
+
+                            headers: {
+
+                                "Content-Type":
+                                    "application/json"
+
+                            },
+
+                            body:
+                                JSON.stringify({
+
+                                    geometry_type:
+                                        geometryType,
+
+                                    geometry:
+                                        geometry,
+
+                                    name:
+                                        name,
+
+                                    asset_type:
+                                        assetType,
+
+                                    description:
+                                        description,
+
+                                    status:
+                                        status
+
+                                })
+
+                        }
+                    );
+
+
+                if (
+                    !response.ok
+                ) {
+
+                    throw new Error(
+                        "Save failed"
+                    );
+                }
+
+
+                pendingLayer =
+                    null;
+
+
+                document.getElementById(
+                    "attributeModal"
+                ).style.display =
+                    "none";
+
+
+                await loadFeatures();
+
+                await loadStatistics();
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    "Error saving feature."
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           LOAD FEATURES
+        ===================================================== */
+
+        async function loadFeatures() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/features"
+                    );
+
+
+                if (
+                    !response.ok
+                ) {
+
+                    throw new Error(
+                        "Load failed"
+                    );
+                }
+
+
+                allFeatures =
+                    await response.json();
+
+
+                displayFeatures(
+                    allFeatures
+                );
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           DISPLAY FEATURE LIST
+        ===================================================== */
+
+        function displayFeatures(
+            features
+        ) {
+
+            const list =
+                document.getElementById(
+                    "featureList"
+                );
+
+
+            list.innerHTML = "";
+
+
+            if (
+                !features ||
+                features.length === 0
+            ) {
+
+                list.innerHTML =
+                    `
+                    <div class="empty-message">
+                        No matching features found.
+                    </div>
+                    `;
+
+                return;
+            }
+
+
+            features.forEach(
+                function(feature) {
+
+                    const item =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    item.className =
+                        "feature-item";
+
+
+                    item.onclick =
+                        function() {
+
+                            zoomToFeature(
+                                feature
+                            );
+
+                        };
+
+
+                    const geometryLabel =
+
+                        feature.geometry_type ===
+                        "LineString"
+
+                            ? "Line"
+
+                            : feature.geometry_type;
+
+
+                    item.innerHTML =
+                        `
+
+                        <div class="feature-name">
+
+                            ${escapeHtml(
+                                feature.name
+                            )}
+
+                        </div>
+
+
+                        <div class="feature-meta">
+
+                            Type:
+                            ${escapeHtml(
+                                feature.asset_type
+                            )}
+
+                            <br>
+
+                            Geometry:
+                            ${geometryLabel}
+
+                            <br>
+
+                            Status:
+                            ${escapeHtml(
+                                feature.status ||
+                                "Active"
+                            )}
+
+                        </div>
+
+
+                        <div class="feature-actions">
+
+
+                            <button
+                                onclick="
+                                    event.stopPropagation();
+                                    editFeature(${feature.id});
+                                "
+                            >
+                                Edit
+                            </button>
+
+
+                            <button
+                                onclick="
+                                    event.stopPropagation();
+                                    deleteFeature(${feature.id});
+                                "
+                            >
+                                Delete
+                            </button>
+
+
+                        </div>
+
+                        `;
+
+
+                    list.appendChild(
+                        item
+                    );
+
+                }
+            );
+
+        }
+
+
+        /* =====================================================
+           ESCAPE HTML
+        ===================================================== */
+
+        function escapeHtml(
+            value
+        ) {
+
+            if (
+                value === null ||
+                value === undefined
+            ) {
+
+                return "";
+            }
+
+
+            return String(value)
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+
+        /* =====================================================
+           FILTERS
+        ===================================================== */
+
+        function applyFilters() {
+
+            const search =
+                document.getElementById(
+                    "searchBox"
+                ).value
+                .toLowerCase()
+                .trim();
+
+
+            const geometryFilter =
+                document.getElementById(
+                    "geometryFilter"
+                ).value;
+
+
+            const statusFilter =
+                document.getElementById(
+                    "statusFilter"
+                ).value;
+
+
+            const filtered =
+                allFeatures.filter(
+                    function(feature) {
+
+                        const searchableText =
+
+                            (
+                                (feature.name || "") +
+                                " " +
+                                (feature.asset_type || "") +
+                                " " +
+                                (feature.geometry_type || "") +
+                                " " +
+                                (feature.status || "") +
+                                " " +
+                                (feature.description || "")
+                            )
+                            .toLowerCase();
+
+
+                        const matchesSearch =
+
+                            !search ||
+
+                            searchableText.includes(
+                                search
+                            );
+
+
+                        const matchesGeometry =
+
+                            geometryFilter ===
+                            "all" ||
+
+                            feature.geometry_type ===
+                            geometryFilter;
+
+
+                        const matchesStatus =
+
+                            statusFilter ===
+                            "all" ||
+
+                            feature.status ===
+                            statusFilter;
+
+
+                        return (
+
+                            matchesSearch &&
+                            matchesGeometry &&
+                            matchesStatus
+
+                        );
+
+                    }
+                );
+
+
+            displayFeatures(
+                filtered
+            );
+
+        }
+
+
+        /* =====================================================
+           ZOOM
+        ===================================================== */
+
+        function zoomToFeature(
+            feature
+        ) {
+
+            try {
+
+                const geojson = {
+
+                    type:
+                        "Feature",
+
+                    geometry:
+                        feature.geometry,
+
+                    properties:
+                        {}
+
+                };
+
+
+                const layer =
+                    L.geoJSON(
+                        geojson
+                    );
+
+
+                const bounds =
+                    layer.getBounds();
+
+
+                if (
+                    feature.geometry_type ===
+                    "Point"
+                ) {
+
+                    map.setView(
+                        bounds.getCenter(),
+                        16
+                    );
+
+                }
+
+                else {
+
+                    map.fitBounds(
+                        bounds,
+                        {
+                            padding:
+                                [40, 40]
+                        }
+                    );
+
+                }
+
+
+                showFeaturePopup(
+                    feature
+                );
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           POPUP
+        ===================================================== */
+
+        function showFeaturePopup(
+            feature
+        ) {
+
+            const geojson = {
+
+                type:
+                    "Feature",
+
+                geometry:
+                    feature.geometry,
+
+                properties:
+                    {}
+
+            };
+
+
+            const tempLayer =
+                L.geoJSON(
+                    geojson
+                );
+
+
+            tempLayer.eachLayer(
+                function(layer) {
+
+                    layer.bindPopup(
+
+                        `
+
+                        <div class="popup-title">
+
+                            ${escapeHtml(
+                                feature.name
+                            )}
+
+                        </div>
+
+
+                        <div class="popup-row">
+
+                            <b>Type:</b>
+                            ${escapeHtml(
+                                feature.asset_type
+                            )}
+
+                        </div>
+
+
+                        <div class="popup-row">
+
+                            <b>Geometry:</b>
+                            ${escapeHtml(
+                                feature.geometry_type
+                            )}
+
+                        </div>
+
+
+                        <div class="popup-row">
+
+                            <b>Status:</b>
+                            ${escapeHtml(
+                                feature.status ||
+                                "Active"
+                            )}
+
+                        </div>
+
+
+                        <div class="popup-row">
+
+                            <b>Description:</b>
+                            ${escapeHtml(
+                                feature.description ||
+                                "-"
+                            )}
+
+                        </div>
+
+                        `
+                    );
+
+
+                    layer.openPopup();
+
+                }
+            );
+
+        }
+
+
+        /* =====================================================
+           EDIT
+        ===================================================== */
+
+        async function editFeature(
+            featureId
+        ) {
+
+            const feature =
+                allFeatures.find(
+                    function(item) {
+
+                        return item.id ===
+                            featureId;
+
+                    }
+                );
+
+
+            if (
+                !feature
+            ) {
+
+                return;
+            }
+
+
+            editingFeatureId =
+                featureId;
+
+
+            editingLayer =
+                L.geoJSON(
+
+                    {
+
+                        type:
+                            "Feature",
+
+                        geometry:
+                            feature.geometry,
+
+                        properties:
+                            {}
+
+                    }
+
+                ).addTo(map);
+
+
+            map.fitBounds(
+                editingLayer.getBounds(),
+                {
+                    padding:
+                        [40, 40]
+                }
+            );
+
+
+            editingLayer.eachLayer(
+                function(layer) {
+
+                    if (
+                        layer.pm
+                    ) {
+
+                        layer.pm.enable();
+
+                    }
+
+                }
+            );
+
+
+            document.getElementById(
+                "geometryType"
+            ).value =
+                feature.geometry_type;
+
+
+            document.getElementById(
+                "featureName"
+            ).value =
+                feature.name || "";
+
+
+            document.getElementById(
+                "assetType"
+            ).value =
+                feature.asset_type || "";
+
+
+            document.getElementById(
+                "description"
+            ).value =
+                feature.description || "";
+
+
+            document.getElementById(
+                "status"
+            ).value =
+                feature.status ||
+                "Active";
+
+
+            document.getElementById(
+                "attributeModal"
+            ).style.display =
+                "flex";
+
+
+            document.querySelector(
+                ".btn-save"
+            ).textContent =
+                "Update Feature";
+
+        }
+
+
+        /* =====================================================
+           UPDATE
+        ===================================================== */
+
+        async function updateFeature() {
+
+            if (
+                !editingLayer ||
+                !editingFeatureId
+            ) {
+
+                return;
+            }
+
+
+            const name =
+                document.getElementById(
+                    "featureName"
+                ).value.trim();
+
+
+            const assetType =
+                document.getElementById(
+                    "assetType"
+                ).value.trim();
+
+
+            const description =
+                document.getElementById(
+                    "description"
+                ).value.trim();
+
+
+            const status =
+                document.getElementById(
+                    "status"
+                ).value;
+
+
+            if (
+                !name ||
+                !assetType
+            ) {
+
+                alert(
+                    "Please enter Name and Type."
+                );
+
+                return;
+            }
+
+
+            let updatedGeometry =
+                null;
+
+
+            editingLayer.eachLayer(
+                function(layer) {
+
+                    updatedGeometry =
+                        layer
+                            .toGeoJSON()
+                            .geometry;
+
+                }
+            );
+
+
+            try {
+
+                const response =
+                    await fetch(
+
+                        `/features/${editingFeatureId}`,
+
+                        {
+
+                            method:
+                                "PUT",
+
+                            headers: {
+
+                                "Content-Type":
+                                    "application/json"
+
+                            },
+
+                            body:
+                                JSON.stringify({
+
+                                    geometry_type:
+
+                                        document
+                                            .getElementById(
+                                                "geometryType"
+                                            )
+                                            .value,
+
+                                    geometry:
+                                        updatedGeometry,
+
+                                    name:
+                                        name,
+
+                                    asset_type:
+                                        assetType,
+
+                                    description:
+                                        description,
+
+                                    status:
+                                        status
+
+                                })
+
+                        }
+                    );
+
+
+                if (
+                    !response.ok
+                ) {
+
+                    throw new Error(
+                        "Update failed"
+                    );
+                }
+
+
+                map.removeLayer(
+                    editingLayer
+                );
+
+
+                editingLayer =
+                    null;
+
+
+                editingFeatureId =
+                    null;
+
+
+                document.getElementById(
+                    "attributeModal"
+                ).style.display =
+                    "none";
+
+
+                document.querySelector(
+                    ".btn-save"
+                ).textContent =
+                    "Save Feature";
+
+
+                await loadFeatures();
+
+                await loadStatistics();
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    "Error updating feature."
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           SAVE / UPDATE BUTTON
+        ===================================================== */
+
+        document.querySelector(
+            ".btn-save"
+        ).onclick =
+            function() {
+
+                if (
+                    editingFeatureId
+                ) {
+
+                    updateFeature();
+
+                }
+
+                else {
+
+                    saveFeature();
+
+                }
+
+            };
+
+
+        /* =====================================================
+           DELETE
+        ===================================================== */
+
+        async function deleteFeature(
+            featureId
+        ) {
+
+            const confirmed =
+                confirm(
+                    "Are you sure you want to delete this feature?"
+                );
+
+
+            if (
+                !confirmed
+            ) {
+
+                return;
+            }
+
+
+            try {
+
+                const response =
+                    await fetch(
+
+                        `/features/${featureId}`,
+
+                        {
+
+                            method:
+                                "DELETE"
+
+                        }
+
+                    );
+
+
+                if (
+                    !response.ok
+                ) {
+
+                    throw new Error(
+                        "Delete failed"
+                    );
+                }
+
+
+                await loadFeatures();
+
+                await loadStatistics();
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    "Error deleting feature."
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           STATISTICS
+        ===================================================== */
+
+        async function loadStatistics() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/statistics"
+                    );
+
+
+                if (
+                    !response.ok
+                ) {
+
+                    return;
+                }
+
+
+                const stats =
+                    await response.json();
+
+
+                document.getElementById(
+                    "totalFeatures"
+                ).textContent =
+                    stats.total;
+
+
+                document.getElementById(
+                    "totalPoints"
+                ).textContent =
+                    stats.points;
+
+
+                document.getElementById(
+                    "totalLines"
+                ).textContent =
+                    stats.lines;
+
+
+                document.getElementById(
+                    "totalPolygons"
+                ).textContent =
+                    stats.polygons;
+
+
+                document.getElementById(
+                    "totalActive"
+                ).textContent =
+                    stats.active;
+
+
+                document.getElementById(
+                    "totalInactive"
+                ).textContent =
+                    stats.inactive;
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           DOWNLOAD
+        ===================================================== */
+
+        async function downloadData() {
+
+            const button =
+                document.getElementById(
+                    "downloadBtn"
+                );
+
+
+            const originalText =
+                button.textContent;
+
+
+            button.disabled =
+                true;
+
+
+            button.textContent =
+                "Preparing download...";
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/download"
+                    );
+
+
+                if (
+                    !response.ok
+                ) {
+
+                    throw new Error(
+                        "Download failed"
+                    );
+                }
+
+
+                const blob =
+                    await response.blob();
+
+
+                const url =
+                    window.URL.createObjectURL(
+                        blob
+                    );
+
+
+                const a =
+                    document.createElement(
+                        "a"
+                    );
+
+
+                a.href =
+                    url;
+
+
+                a.download =
+                    "SpatioraMap_Export.zip";
+
+
+                document.body.appendChild(
+                    a
+                );
+
+
+                a.click();
+
+
+                a.remove();
+
+
+                window.URL.revokeObjectURL(
+                    url
+                );
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    "Error preparing download."
+                );
+
+            }
+
+            finally {
+
+                button.disabled =
+                    false;
+
+
+                button.textContent =
+                    originalText;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           SIDEBAR RESIZE
+        ===================================================== */
+
+        const sidebar =
+            document.getElementById(
+                "sidebar"
+            );
+
+
+        const mapElement =
+            document.getElementById(
+                "map"
+            );
+
+
+        const resizeHandle =
+            document.getElementById(
+                "resizeHandle"
+            );
+
+
+        let isResizing =
+            false;
+
+
+        resizeHandle.addEventListener(
+            "mousedown",
+            function() {
+
+                isResizing =
+                    true;
+
+                document.body.classList.add(
+                    "resizing"
+                );
+
+            }
+        );
+
+
+        document.addEventListener(
+            "mousemove",
+            function(event) {
+
+                if (
+                    !isResizing
+                ) {
+
+                    return;
+                }
+
+
+                let newWidth =
+                    event.clientX;
+
+
+                const minWidth =
+                    260;
+
+
+                const maxWidth =
+                    Math.min(
+                        520,
+                        window.innerWidth - 180
+                    );
+
+
+                newWidth =
+                    Math.max(
+                        minWidth,
+                        newWidth
+                    );
+
+
+                newWidth =
+                    Math.min(
+                        maxWidth,
+                        newWidth
+                    );
+
+
+                sidebar.style.width =
+                    newWidth + "px";
+
+
+                mapElement.style.left =
+                    newWidth + "px";
+
+
+                map.invalidateSize();
+
+            }
+        );
+
+
+        document.addEventListener(
+            "mouseup",
+            function() {
+
+                if (
+                    !isResizing
+                ) {
+
+                    return;
+                }
+
+
+                isResizing =
+                    false;
+
+
+                document.body.classList.remove(
+                    "resizing"
+                );
+
+            }
+        );
+
+
+        /* =====================================================
+           MODAL OUTSIDE CLICK
+        ===================================================== */
+
+        document.getElementById(
+            "attributeModal"
+        ).addEventListener(
+            "click",
+            function(event) {
+
+                if (
+                    event.target ===
+                    this
+                ) {
+
+                    closeModal();
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           INITIAL LOAD
+        ===================================================== */
+
+        loadFeatures();
+
+        loadStatistics();
+
+    </script>
+
+</body>
+
+</html>
