@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from pydantic import BaseModel
@@ -7,70 +7,48 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from database import SessionLocal
-from models import Feature
+from backend.database import SessionLocal
+from backend.models import Base, Feature
 
 import json
-import os
-import tempfile
-import zipfile
 import csv
+import io
+import zipfile
+import tempfile
+from pathlib import Path
 
 import shapefile
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+
 app = FastAPI(
     title="SpatioraMap",
-    version="0.3.0"
+    version="0.4.0",
+    description="Mini GIS Digitizing Application"
 )
 
-
-# --------------------------------------------------
-# FRONTEND
-# --------------------------------------------------
-
-app.mount(
-    "/static",
-    StaticFiles(directory="../frontend"),
-    name="static"
-)
-
-
-@app.get("/")
-def home():
-
-    return FileResponse(
-        "../frontend/index.html"
-    )
-
-
-# --------------------------------------------------
-# PYDANTIC MODEL
-# --------------------------------------------------
 
 class FeatureData(BaseModel):
-
     geometry_type: str
-
     geometry: dict
-
     name: str
-
     asset_type: str
-
     description: Optional[str] = ""
-
     status: str = "Active"
 
 
-# --------------------------------------------------
-# CREATE FEATURE
-# --------------------------------------------------
+@app.get("/")
+def read_root():
+    return FileResponse(
+        FRONTEND_DIR / "index.html"
+    )
+
 
 @app.post("/features")
-def create_feature(
-    feature_data: FeatureData
-):
+def create_feature(data: FeatureData):
 
     allowed_types = [
         "Point",
@@ -78,11 +56,10 @@ def create_feature(
         "Polygon"
     ]
 
-    if feature_data.geometry_type not in allowed_types:
-
+    if data.geometry_type not in allowed_types:
         raise HTTPException(
             status_code=400,
-            detail="Invalid geometry type"
+            detail="Invalid geometry type."
         )
 
     db: Session = SessionLocal()
@@ -90,47 +67,26 @@ def create_feature(
     try:
 
         feature = Feature(
-
-            geometry_type=
-                feature_data.geometry_type,
-
-            geometry=
-                json.dumps(
-                    feature_data.geometry
-                ),
-
-            name=
-                feature_data.name,
-
-            asset_type=
-                feature_data.asset_type,
-
-            description=
-                feature_data.description,
-
-            status=
-                feature_data.status
+            geometry_type=data.geometry_type,
+            geometry=json.dumps(data.geometry),
+            name=data.name,
+            asset_type=data.asset_type,
+            description=data.description,
+            status=data.status
         )
 
         db.add(feature)
-
         db.commit()
-
         db.refresh(feature)
 
         return {
-            "message": "Feature saved successfully",
-            "id": feature.id
+            "id": feature.id,
+            "message": "Feature saved successfully."
         }
 
     finally:
-
         db.close()
 
-
-# --------------------------------------------------
-# GET ALL FEATURES
-# --------------------------------------------------
 
 @app.get("/features")
 def get_features():
@@ -141,9 +97,7 @@ def get_features():
 
         features = (
             db.query(Feature)
-            .order_by(
-                Feature.id.desc()
-            )
+            .order_by(Feature.id.desc())
             .all()
         )
 
@@ -152,49 +106,28 @@ def get_features():
         for feature in features:
 
             result.append({
-
-                "id":
-                    feature.id,
-
-                "geometry_type":
-                    feature.geometry_type,
-
-                "geometry":
-                    json.loads(
-                        feature.geometry
-                    ),
-
-                "name":
-                    feature.name,
-
-                "asset_type":
-                    feature.asset_type,
-
-                "description":
-                    feature.description,
-
-                "status":
-                    feature.status,
-
-                "created_at":
-                    feature.created_at
+                "id": feature.id,
+                "geometry_type": feature.geometry_type,
+                "geometry": json.loads(feature.geometry),
+                "name": feature.name,
+                "asset_type": feature.asset_type,
+                "description": feature.description or "",
+                "status": feature.status or "Active",
+                "created_at": (
+                    feature.created_at.isoformat()
+                    if feature.created_at
+                    else None
+                )
             })
 
         return result
 
     finally:
-
         db.close()
 
 
-# --------------------------------------------------
-# GET SINGLE FEATURE
-# --------------------------------------------------
-
 @app.get("/features/{feature_id}")
-def get_feature(
-    feature_id: int
-):
+def get_feature(feature_id: int):
 
     db: Session = SessionLocal()
 
@@ -202,62 +135,52 @@ def get_feature(
 
         feature = (
             db.query(Feature)
-            .filter(
-                Feature.id == feature_id
-            )
+            .filter(Feature.id == feature_id)
             .first()
         )
 
         if not feature:
-
             raise HTTPException(
                 status_code=404,
-                detail="Feature not found"
+                detail="Feature not found."
             )
 
         return {
-
-            "id":
-                feature.id,
-
-            "geometry_type":
-                feature.geometry_type,
-
-            "geometry":
-                json.loads(
-                    feature.geometry
-                ),
-
-            "name":
-                feature.name,
-
-            "asset_type":
-                feature.asset_type,
-
-            "description":
-                feature.description,
-
-            "status":
-                feature.status,
-
-            "created_at":
-                feature.created_at
+            "id": feature.id,
+            "geometry_type": feature.geometry_type,
+            "geometry": json.loads(feature.geometry),
+            "name": feature.name,
+            "asset_type": feature.asset_type,
+            "description": feature.description or "",
+            "status": feature.status or "Active",
+            "created_at": (
+                feature.created_at.isoformat()
+                if feature.created_at
+                else None
+            )
         }
 
     finally:
-
         db.close()
 
-
-# --------------------------------------------------
-# UPDATE FEATURE
-# --------------------------------------------------
 
 @app.put("/features/{feature_id}")
 def update_feature(
     feature_id: int,
-    feature_data: FeatureData
+    data: FeatureData
 ):
+
+    allowed_types = [
+        "Point",
+        "LineString",
+        "Polygon"
+    ]
+
+    if data.geometry_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid geometry type."
+        )
 
     db: Session = SessionLocal()
 
@@ -265,63 +188,37 @@ def update_feature(
 
         feature = (
             db.query(Feature)
-            .filter(
-                Feature.id == feature_id
-            )
+            .filter(Feature.id == feature_id)
             .first()
         )
 
         if not feature:
-
             raise HTTPException(
                 status_code=404,
-                detail="Feature not found"
+                detail="Feature not found."
             )
 
-        feature.geometry_type = (
-            feature_data.geometry_type
-        )
-
-        feature.geometry = json.dumps(
-            feature_data.geometry
-        )
-
-        feature.name = (
-            feature_data.name
-        )
-
-        feature.asset_type = (
-            feature_data.asset_type
-        )
-
-        feature.description = (
-            feature_data.description
-        )
-
-        feature.status = (
-            feature_data.status
-        )
+        feature.geometry_type = data.geometry_type
+        feature.geometry = json.dumps(data.geometry)
+        feature.name = data.name
+        feature.asset_type = data.asset_type
+        feature.description = data.description
+        feature.status = data.status
 
         db.commit()
+        db.refresh(feature)
 
         return {
-            "message":
-                "Feature updated successfully"
+            "id": feature.id,
+            "message": "Feature updated successfully."
         }
 
     finally:
-
         db.close()
 
 
-# --------------------------------------------------
-# DELETE FEATURE
-# --------------------------------------------------
-
 @app.delete("/features/{feature_id}")
-def delete_feature(
-    feature_id: int
-):
+def delete_feature(feature_id: int):
 
     db: Session = SessionLocal()
 
@@ -329,36 +226,26 @@ def delete_feature(
 
         feature = (
             db.query(Feature)
-            .filter(
-                Feature.id == feature_id
-            )
+            .filter(Feature.id == feature_id)
             .first()
         )
 
         if not feature:
-
             raise HTTPException(
                 status_code=404,
-                detail="Feature not found"
+                detail="Feature not found."
             )
 
         db.delete(feature)
-
         db.commit()
 
         return {
-            "message":
-                "Feature deleted successfully"
+            "message": "Feature deleted successfully."
         }
 
     finally:
-
         db.close()
 
-
-# --------------------------------------------------
-# STATISTICS
-# --------------------------------------------------
 
 @app.get("/statistics")
 def get_statistics():
@@ -375,61 +262,49 @@ def get_statistics():
         total = len(features)
 
         points = sum(
-            1
-            for f in features
+            1 for f in features
             if f.geometry_type == "Point"
         )
 
         lines = sum(
-            1
-            for f in features
+            1 for f in features
             if f.geometry_type == "LineString"
         )
 
         polygons = sum(
-            1
-            for f in features
+            1 for f in features
             if f.geometry_type == "Polygon"
         )
 
         active = sum(
-            1
-            for f in features
-            if f.status == "Active"
+            1 for f in features
+            if (f.status or "Active") == "Active"
         )
 
         inactive = sum(
-            1
-            for f in features
-            if f.status == "Inactive"
+            1 for f in features
+            if (f.status or "Active") == "Inactive"
         )
 
         return {
-
             "total": total,
-
             "points": points,
-
             "lines": lines,
-
             "polygons": polygons,
-
             "active": active,
-
             "inactive": inactive
         }
 
     finally:
-
         db.close()
 
 
-# --------------------------------------------------
-# DOWNLOAD SHAPEFILES + CSV
-# --------------------------------------------------
-
-@app.get("/download")
-def download_data():
+def write_shapefile(
+    output_directory,
+    geometry_type,
+    filename,
+    shape_type
+):
 
     db: Session = SessionLocal()
 
@@ -437,361 +312,223 @@ def download_data():
 
         features = (
             db.query(Feature)
-            .order_by(
-                Feature.id
+            .filter(
+                Feature.geometry_type == geometry_type
             )
             .all()
         )
 
         if not features:
+            return False
 
-            raise HTTPException(
-                status_code=404,
-                detail="No features available for download"
-            )
-
-        temp_dir = tempfile.mkdtemp()
-
-        # ------------------------------------------
-        # CSV ATTRIBUTES
-        # ------------------------------------------
-
-        csv_file = os.path.join(
-            temp_dir,
-            "all_attributes.csv"
+        shp_path = (
+            Path(output_directory) / filename
         )
 
-        with open(
-            csv_file,
-            "w",
-            newline="",
-            encoding="utf-8-sig"
-        ) as file:
+        writer = shapefile.Writer(
+            str(shp_path),
+            shapeType=shape_type
+        )
 
-            writer = csv.writer(file)
+        writer.field(
+            "ID",
+            "N",
+            size=10
+        )
 
-            writer.writerow([
-                "ID",
-                "Name",
-                "Asset_Type",
-                "Description",
-                "Status",
-                "Geometry_Type",
-                "Created_At"
-            ])
+        writer.field(
+            "NAME",
+            "C",
+            size=100
+        )
 
-            for feature in features:
+        writer.field(
+            "TYPE",
+            "C",
+            size=80
+        )
 
-                writer.writerow([
+        writer.field(
+            "DESC",
+            "C",
+            size=254
+        )
 
-                    feature.id,
-
-                    feature.name,
-
-                    feature.asset_type,
-
-                    feature.description or "",
-
-                    feature.status,
-
-                    feature.geometry_type,
-
-                    feature.created_at
-                ])
-
-
-        # ------------------------------------------
-        # CREATE SHAPEFILES BY GEOMETRY TYPE
-        # ------------------------------------------
-
-        geometry_groups = {
-
-            "Point": [],
-
-            "LineString": [],
-
-            "Polygon": []
-        }
-
+        writer.field(
+            "STATUS",
+            "C",
+            size=20
+        )
 
         for feature in features:
 
-            if feature.geometry_type in geometry_groups:
-
-                geometry_groups[
-                    feature.geometry_type
-                ].append(feature)
-
-
-        # ------------------------------------------
-        # POINT SHAPEFILE
-        # ------------------------------------------
-
-        if geometry_groups["Point"]:
-
-            shp_path = os.path.join(
-                temp_dir,
-                "points"
+            geometry = json.loads(
+                feature.geometry
             )
 
-            writer = shapefile.Writer(
-                shp_path,
-                shapeType=shapefile.POINT
-            )
+            coordinates = geometry["coordinates"]
 
-            writer.field(
-                "ID",
-                "N"
-            )
+            if geometry_type == "Point":
 
-            writer.field(
-                "NAME",
-                "C",
-                size=100
-            )
-
-            writer.field(
-                "TYPE",
-                "C",
-                size=100
-            )
-
-            writer.field(
-                "DESC",
-                "C",
-                size=254
-            )
-
-            writer.field(
-                "STATUS",
-                "C",
-                size=20
-            )
-
-            for feature in geometry_groups["Point"]:
-
-                geometry = json.loads(
-                    feature.geometry
-                )
-
-                coordinates = (
-                    geometry["coordinates"]
-                )
+                x = coordinates[0]
+                y = coordinates[1]
 
                 writer.point(
-                    coordinates[0],
-                    coordinates[1]
+                    x,
+                    y
                 )
 
-                writer.record(
+            elif geometry_type == "LineString":
 
-                    feature.id,
-
-                    feature.name,
-
-                    feature.asset_type,
-
-                    feature.description or "",
-
-                    feature.status
+                writer.line(
+                    [coordinates]
                 )
 
-            writer.close()
-
-
-        # ------------------------------------------
-        # LINE SHAPEFILE
-        # ------------------------------------------
-
-        if geometry_groups["LineString"]:
-
-            shp_path = os.path.join(
-                temp_dir,
-                "lines"
-            )
-
-            writer = shapefile.Writer(
-                shp_path,
-                shapeType=shapefile.POLYLINE
-            )
-
-            writer.field(
-                "ID",
-                "N"
-            )
-
-            writer.field(
-                "NAME",
-                "C",
-                size=100
-            )
-
-            writer.field(
-                "TYPE",
-                "C",
-                size=100
-            )
-
-            writer.field(
-                "DESC",
-                "C",
-                size=254
-            )
-
-            writer.field(
-                "STATUS",
-                "C",
-                size=20
-            )
-
-            for feature in geometry_groups["LineString"]:
-
-                geometry = json.loads(
-                    feature.geometry
-                )
-
-                coordinates = (
-                    geometry["coordinates"]
-                )
-
-                writer.line([
-                    coordinates
-                ])
-
-                writer.record(
-
-                    feature.id,
-
-                    feature.name,
-
-                    feature.asset_type,
-
-                    feature.description or "",
-
-                    feature.status
-                )
-
-            writer.close()
-
-
-        # ------------------------------------------
-        # POLYGON SHAPEFILE
-        # ------------------------------------------
-
-        if geometry_groups["Polygon"]:
-
-            shp_path = os.path.join(
-                temp_dir,
-                "polygons"
-            )
-
-            writer = shapefile.Writer(
-                shp_path,
-                shapeType=shapefile.POLYGON
-            )
-
-            writer.field(
-                "ID",
-                "N"
-            )
-
-            writer.field(
-                "NAME",
-                "C",
-                size=100
-            )
-
-            writer.field(
-                "TYPE",
-                "C",
-                size=100
-            )
-
-            writer.field(
-                "DESC",
-                "C",
-                size=254
-            )
-
-            writer.field(
-                "STATUS",
-                "C",
-                size=20
-            )
-
-            for feature in geometry_groups["Polygon"]:
-
-                geometry = json.loads(
-                    feature.geometry
-                )
-
-                coordinates = (
-                    geometry["coordinates"]
-                )
+            elif geometry_type == "Polygon":
 
                 writer.poly(
                     coordinates
                 )
 
-                writer.record(
+            writer.record(
+                feature.id,
+                feature.name,
+                feature.asset_type,
+                feature.description or "",
+                feature.status or "Active"
+            )
 
-                    feature.id,
+        writer.close()
 
-                    feature.name,
-
-                    feature.asset_type,
-
-                    feature.description or "",
-
-                    feature.status
-                )
-
-            writer.close()
-
-
-        # ------------------------------------------
-        # ZIP FILE
-        # ------------------------------------------
-
-        zip_path = os.path.join(
-            temp_dir,
-            "SpatioraMap_Export.zip"
+        prj_path = (
+            Path(output_directory) /
+            f"{filename}.prj"
         )
 
-        with zipfile.ZipFile(
-            zip_path,
-            "w",
-            zipfile.ZIP_DEFLATED
-        ) as zip_file:
-
-            for filename in os.listdir(
-                temp_dir
-            ):
-
-                full_path = os.path.join(
-                    temp_dir,
-                    filename
-                )
-
-                if filename != "SpatioraMap_Export.zip":
-
-                    zip_file.write(
-                        full_path,
-                        filename
-                    )
-
-
-        return FileResponse(
-
-            zip_path,
-
-            media_type=
-                "application/zip",
-
-            filename=
-                "SpatioraMap_Export.zip"
+        prj_content = (
+            'GEOGCS["GCS_WGS_1984",'
+            'DATUM["D_WGS_1984",'
+            'SPHEROID["WGS_1984",'
+            '6378137,298.257223563]],'
+            'PRIMEM["Greenwich",0],'
+            'UNIT["Degree",'
+            '0.0174532925199433]]'
         )
+
+        prj_path.write_text(
+            prj_content,
+            encoding="utf-8"
+        )
+
+        return True
 
     finally:
-
         db.close()
+
+
+@app.get("/download")
+def download_data():
+
+    temporary_directory = tempfile.mkdtemp()
+
+    output_directory = Path(
+        temporary_directory
+    )
+
+    point_created = write_shapefile(
+        output_directory,
+        "Point",
+        "points",
+        shapefile.POINT
+    )
+
+    line_created = write_shapefile(
+        output_directory,
+        "LineString",
+        "lines",
+        shapefile.POLYLINE
+    )
+
+    polygon_created = write_shapefile(
+        output_directory,
+        "Polygon",
+        "polygons",
+        shapefile.POLYGON
+    )
+
+    db: Session = SessionLocal()
+
+    try:
+
+        features = (
+            db.query(Feature)
+            .order_by(Feature.id)
+            .all()
+        )
+
+        csv_path = (
+            output_directory /
+            "all_attributes.csv"
+        )
+
+        with open(
+            csv_path,
+            "w",
+            newline="",
+            encoding="utf-8-sig"
+        ) as csv_file:
+
+            writer = csv.writer(csv_file)
+
+            writer.writerow([
+                "ID",
+                "Name",
+                "Type",
+                "Geometry",
+                "Description",
+                "Status",
+                "Created At"
+            ])
+
+            for feature in features:
+
+                writer.writerow([
+                    feature.id,
+                    feature.name,
+                    feature.asset_type,
+                    feature.geometry_type,
+                    feature.description or "",
+                    feature.status or "Active",
+                    feature.created_at
+                ])
+
+    finally:
+        db.close()
+
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(
+        zip_buffer,
+        "w",
+        zipfile.ZIP_DEFLATED
+    ) as zip_file:
+
+        for file_path in output_directory.iterdir():
+
+            if file_path.is_file():
+
+                zip_file.write(
+                    file_path,
+                    arcname=file_path.name
+                )
+
+    zip_buffer.seek(0)
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition":
+                'attachment; filename="SpatioraMap_Export.zip"'
+        }
+    )
