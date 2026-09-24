@@ -1,35 +1,49 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
-
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from typing import Optional
-
+from pathlib import Path
 from sqlalchemy.orm import Session
-
-from backend.database import SessionLocal
-from backend.models import Base, Feature
-
+from datetime import datetime
 import json
 import csv
 import io
 import zipfile
 import tempfile
-from pathlib import Path
-
 import shapefile
 
+from backend.database import SessionLocal, engine
+from backend.models import Base, Feature
+
+
+# ---------------------------------------------------------
+# DATABASE INITIALIZATION
+# ---------------------------------------------------------
+
+Base.metadata.create_all(bind=engine)
+
+
+# ---------------------------------------------------------
+# APP
+# ---------------------------------------------------------
+
+app = FastAPI(
+    title="SpatioraMap",
+    version="0.4.0"
+)
+
+
+# ---------------------------------------------------------
+# PATHS
+# ---------------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 
-app = FastAPI(
-    title="SpatioraMap",
-    version="0.4.0",
-    description="Mini GIS Digitizing Application"
-)
-
+# ---------------------------------------------------------
+# PYDANTIC MODEL
+# ---------------------------------------------------------
 
 class FeatureData(BaseModel):
     geometry_type: str
@@ -40,12 +54,40 @@ class FeatureData(BaseModel):
     status: str = "Active"
 
 
-@app.get("/")
-def read_root():
-    return FileResponse(
-        FRONTEND_DIR / "index.html"
-    )
+# ---------------------------------------------------------
+# ROOT
+# ---------------------------------------------------------
 
+@app.get("/")
+def home():
+
+    index_file = FRONTEND_DIR / "index.html"
+
+    if not index_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Frontend index.html not found."
+        )
+
+    return FileResponse(index_file)
+
+
+# ---------------------------------------------------------
+# HEALTH CHECK
+# ---------------------------------------------------------
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "ok",
+        "application": "SpatioraMap"
+    }
+
+
+# ---------------------------------------------------------
+# CREATE FEATURE
+# ---------------------------------------------------------
 
 @app.post("/features")
 def create_feature(data: FeatureData):
@@ -62,6 +104,12 @@ def create_feature(data: FeatureData):
             detail="Invalid geometry type."
         )
 
+    if not data.name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Feature name is required."
+        )
+
     db: Session = SessionLocal()
 
     try:
@@ -69,10 +117,15 @@ def create_feature(data: FeatureData):
         feature = Feature(
             geometry_type=data.geometry_type,
             geometry=json.dumps(data.geometry),
-            name=data.name,
-            asset_type=data.asset_type,
-            description=data.description,
-            status=data.status
+            name=data.name.strip(),
+            asset_type=data.asset_type.strip(),
+            description=(
+                data.description.strip()
+                if data.description
+                else ""
+            ),
+            status=data.status,
+            created_at=datetime.utcnow()
         )
 
         db.add(feature)
@@ -81,12 +134,31 @@ def create_feature(data: FeatureData):
 
         return {
             "id": feature.id,
-            "message": "Feature saved successfully."
+            "geometry_type": feature.geometry_type,
+            "geometry": json.loads(feature.geometry),
+            "name": feature.name,
+            "asset_type": feature.asset_type,
+            "description": feature.description,
+            "status": feature.status,
+            "created_at": feature.created_at
         }
+
+    except Exception as e:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error saving feature: {str(e)}"
+        )
 
     finally:
         db.close()
 
+
+# ---------------------------------------------------------
+# GET ALL FEATURES
+# ---------------------------------------------------------
 
 @app.get("/features")
 def get_features():
@@ -112,12 +184,8 @@ def get_features():
                 "name": feature.name,
                 "asset_type": feature.asset_type,
                 "description": feature.description or "",
-                "status": feature.status or "Active",
-                "created_at": (
-                    feature.created_at.isoformat()
-                    if feature.created_at
-                    else None
-                )
+                "status": feature.status,
+                "created_at": feature.created_at
             })
 
         return result
@@ -125,6 +193,10 @@ def get_features():
     finally:
         db.close()
 
+
+# ---------------------------------------------------------
+# GET SINGLE FEATURE
+# ---------------------------------------------------------
 
 @app.get("/features/{feature_id}")
 def get_feature(feature_id: int):
@@ -152,17 +224,17 @@ def get_feature(feature_id: int):
             "name": feature.name,
             "asset_type": feature.asset_type,
             "description": feature.description or "",
-            "status": feature.status or "Active",
-            "created_at": (
-                feature.created_at.isoformat()
-                if feature.created_at
-                else None
-            )
+            "status": feature.status,
+            "created_at": feature.created_at
         }
 
     finally:
         db.close()
 
+
+# ---------------------------------------------------------
+# UPDATE FEATURE
+# ---------------------------------------------------------
 
 @app.put("/features/{feature_id}")
 def update_feature(
@@ -180,6 +252,12 @@ def update_feature(
         raise HTTPException(
             status_code=400,
             detail="Invalid geometry type."
+        )
+
+    if not data.name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Feature name is required."
         )
 
     db: Session = SessionLocal()
@@ -200,9 +278,13 @@ def update_feature(
 
         feature.geometry_type = data.geometry_type
         feature.geometry = json.dumps(data.geometry)
-        feature.name = data.name
-        feature.asset_type = data.asset_type
-        feature.description = data.description
+        feature.name = data.name.strip()
+        feature.asset_type = data.asset_type.strip()
+        feature.description = (
+            data.description.strip()
+            if data.description
+            else ""
+        )
         feature.status = data.status
 
         db.commit()
@@ -210,12 +292,36 @@ def update_feature(
 
         return {
             "id": feature.id,
-            "message": "Feature updated successfully."
+            "geometry_type": feature.geometry_type,
+            "geometry": json.loads(feature.geometry),
+            "name": feature.name,
+            "asset_type": feature.asset_type,
+            "description": feature.description,
+            "status": feature.status,
+            "created_at": feature.created_at
         }
+
+    except HTTPException:
+
+        db.rollback()
+        raise
+
+    except Exception as e:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error updating feature: {str(e)}"
+        )
 
     finally:
         db.close()
 
+
+# ---------------------------------------------------------
+# DELETE FEATURE
+# ---------------------------------------------------------
 
 @app.delete("/features/{feature_id}")
 def delete_feature(feature_id: int):
@@ -240,51 +346,64 @@ def delete_feature(feature_id: int):
         db.commit()
 
         return {
-            "message": "Feature deleted successfully."
+            "message": "Feature deleted successfully.",
+            "id": feature_id
         }
+
+    except HTTPException:
+
+        db.rollback()
+        raise
+
+    except Exception as e:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error deleting feature: {str(e)}"
+        )
 
     finally:
         db.close()
 
 
+# ---------------------------------------------------------
+# STATISTICS
+# ---------------------------------------------------------
+
 @app.get("/statistics")
-def get_statistics():
+def statistics():
 
     db: Session = SessionLocal()
 
     try:
 
-        features = (
-            db.query(Feature)
-            .all()
-        )
+        features = db.query(Feature).all()
 
         total = len(features)
+        points = 0
+        lines = 0
+        polygons = 0
+        active = 0
+        inactive = 0
 
-        points = sum(
-            1 for f in features
-            if f.geometry_type == "Point"
-        )
+        for feature in features:
 
-        lines = sum(
-            1 for f in features
-            if f.geometry_type == "LineString"
-        )
+            if feature.geometry_type == "Point":
+                points += 1
 
-        polygons = sum(
-            1 for f in features
-            if f.geometry_type == "Polygon"
-        )
+            elif feature.geometry_type == "LineString":
+                lines += 1
 
-        active = sum(
-            1 for f in features
-            if (f.status or "Active") == "Active"
-        )
+            elif feature.geometry_type == "Polygon":
+                polygons += 1
 
-        inactive = sum(
-            1 for f in features
-            if (f.status or "Active") == "Inactive"
-        )
+            if feature.status == "Active":
+                active += 1
+
+            elif feature.status == "Inactive":
+                inactive += 1
 
         return {
             "total": total,
@@ -299,236 +418,243 @@ def get_statistics():
         db.close()
 
 
-def write_shapefile(
-    output_directory,
-    geometry_type,
-    filename,
-    shape_type
-):
-
-    db: Session = SessionLocal()
-
-    try:
-
-        features = (
-            db.query(Feature)
-            .filter(
-                Feature.geometry_type == geometry_type
-            )
-            .all()
-        )
-
-        if not features:
-            return False
-
-        shp_path = (
-            Path(output_directory) / filename
-        )
-
-        writer = shapefile.Writer(
-            str(shp_path),
-            shapeType=shape_type
-        )
-
-        writer.field(
-            "ID",
-            "N",
-            size=10
-        )
-
-        writer.field(
-            "NAME",
-            "C",
-            size=100
-        )
-
-        writer.field(
-            "TYPE",
-            "C",
-            size=80
-        )
-
-        writer.field(
-            "DESC",
-            "C",
-            size=254
-        )
-
-        writer.field(
-            "STATUS",
-            "C",
-            size=20
-        )
-
-        for feature in features:
-
-            geometry = json.loads(
-                feature.geometry
-            )
-
-            coordinates = geometry["coordinates"]
-
-            if geometry_type == "Point":
-
-                x = coordinates[0]
-                y = coordinates[1]
-
-                writer.point(
-                    x,
-                    y
-                )
-
-            elif geometry_type == "LineString":
-
-                writer.line(
-                    [coordinates]
-                )
-
-            elif geometry_type == "Polygon":
-
-                writer.poly(
-                    coordinates
-                )
-
-            writer.record(
-                feature.id,
-                feature.name,
-                feature.asset_type,
-                feature.description or "",
-                feature.status or "Active"
-            )
-
-        writer.close()
-
-        prj_path = (
-            Path(output_directory) /
-            f"{filename}.prj"
-        )
-
-        prj_content = (
-            'GEOGCS["GCS_WGS_1984",'
-            'DATUM["D_WGS_1984",'
-            'SPHEROID["WGS_1984",'
-            '6378137,298.257223563]],'
-            'PRIMEM["Greenwich",0],'
-            'UNIT["Degree",'
-            '0.0174532925199433]]'
-        )
-
-        prj_path.write_text(
-            prj_content,
-            encoding="utf-8"
-        )
-
-        return True
-
-    finally:
-        db.close()
-
+# ---------------------------------------------------------
+# DOWNLOAD SHAPEFILES + ATTRIBUTES
+# ---------------------------------------------------------
 
 @app.get("/download")
 def download_data():
 
-    temporary_directory = tempfile.mkdtemp()
-
-    output_directory = Path(
-        temporary_directory
-    )
-
-    point_created = write_shapefile(
-        output_directory,
-        "Point",
-        "points",
-        shapefile.POINT
-    )
-
-    line_created = write_shapefile(
-        output_directory,
-        "LineString",
-        "lines",
-        shapefile.POLYLINE
-    )
-
-    polygon_created = write_shapefile(
-        output_directory,
-        "Polygon",
-        "polygons",
-        shapefile.POLYGON
-    )
-
     db: Session = SessionLocal()
 
     try:
 
         features = (
             db.query(Feature)
-            .order_by(Feature.id)
+            .order_by(Feature.id.asc())
             .all()
         )
 
-        csv_path = (
-            output_directory /
-            "all_attributes.csv"
+        if not features:
+            raise HTTPException(
+                status_code=404,
+                detail="No features available for download."
+            )
+
+        temp_dir = Path(tempfile.mkdtemp())
+
+        point_features = []
+        line_features = []
+        polygon_features = []
+
+        attributes = []
+
+        for feature in features:
+
+            geometry = json.loads(feature.geometry)
+
+            record = {
+                "id": feature.id,
+                "name": feature.name,
+                "asset_type": feature.asset_type,
+                "description": feature.description or "",
+                "status": feature.status,
+                "geometry_type": feature.geometry_type,
+                "created_at": str(feature.created_at)
+            }
+
+            attributes.append(record)
+
+            if feature.geometry_type == "Point":
+                point_features.append(
+                    (geometry, record)
+                )
+
+            elif feature.geometry_type == "LineString":
+                line_features.append(
+                    (geometry, record)
+                )
+
+            elif feature.geometry_type == "Polygon":
+                polygon_features.append(
+                    (geometry, record)
+                )
+
+        def write_shapefile(
+            geometry_type,
+            feature_list,
+            output_name
+        ):
+
+            if not feature_list:
+                return None
+
+            shp_path = temp_dir / output_name
+
+            if geometry_type == "Point":
+
+                writer = shapefile.Writer(
+                    str(shp_path),
+                    shapeType=shapefile.POINT
+                )
+
+            elif geometry_type == "LineString":
+
+                writer = shapefile.Writer(
+                    str(shp_path),
+                    shapeType=shapefile.POLYLINE
+                )
+
+            elif geometry_type == "Polygon":
+
+                writer = shapefile.Writer(
+                    str(shp_path),
+                    shapeType=shapefile.POLYGON
+                )
+
+            writer.field(
+                "ID",
+                "N"
+            )
+
+            writer.field(
+                "NAME",
+                "C",
+                size=150
+            )
+
+            writer.field(
+                "TYPE",
+                "C",
+                size=100
+            )
+
+            writer.field(
+                "DESC",
+                "C",
+                size=254
+            )
+
+            writer.field(
+                "STATUS",
+                "C",
+                size=30
+            )
+
+            writer.field(
+                "CREATED",
+                "C",
+                size=50
+            )
+
+            for geometry, record in feature_list:
+
+                coordinates = geometry.get(
+                    "coordinates"
+                )
+
+                if geometry_type == "Point":
+
+                    writer.point(
+                        coordinates[0],
+                        coordinates[1]
+                    )
+
+                elif geometry_type == "LineString":
+
+                    writer.line(
+                        [coordinates]
+                    )
+
+                elif geometry_type == "Polygon":
+
+                    writer.poly(
+                        coordinates
+                    )
+
+                writer.record(
+                    record["id"],
+                    record["name"],
+                    record["asset_type"],
+                    record["description"],
+                    record["status"],
+                    record["created_at"]
+                )
+
+            writer.close()
+
+            return shp_path
+
+        write_shapefile(
+            "Point",
+            point_features,
+            "points"
         )
+
+        write_shapefile(
+            "LineString",
+            line_features,
+            "lines"
+        )
+
+        write_shapefile(
+            "Polygon",
+            polygon_features,
+            "polygons"
+        )
+
+        csv_path = temp_dir / "all_attributes.csv"
 
         with open(
             csv_path,
             "w",
             newline="",
-            encoding="utf-8-sig"
+            encoding="utf-8"
         ) as csv_file:
 
-            writer = csv.writer(csv_file)
+            writer = csv.DictWriter(
+                csv_file,
+                fieldnames=[
+                    "id",
+                    "name",
+                    "asset_type",
+                    "description",
+                    "status",
+                    "geometry_type",
+                    "created_at"
+                ]
+            )
 
-            writer.writerow([
-                "ID",
-                "Name",
-                "Type",
-                "Geometry",
-                "Description",
-                "Status",
-                "Created At"
-            ])
+            writer.writeheader()
+            writer.writerows(attributes)
 
-            for feature in features:
+        zip_buffer = io.BytesIO()
 
-                writer.writerow([
-                    feature.id,
-                    feature.name,
-                    feature.asset_type,
-                    feature.geometry_type,
-                    feature.description or "",
-                    feature.status or "Active",
-                    feature.created_at
-                ])
+        with zipfile.ZipFile(
+            zip_buffer,
+            "w",
+            zipfile.ZIP_DEFLATED
+        ) as zip_file:
+
+            for file_path in temp_dir.iterdir():
+
+                if file_path.is_file():
+
+                    zip_file.write(
+                        file_path,
+                        arcname=file_path.name
+                    )
+
+        zip_buffer.seek(0)
+
+        return Response(
+            content=zip_buffer.getvalue(),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition":
+                    'attachment; filename="SpatioraMap_Export.zip"'
+            }
+        )
 
     finally:
         db.close()
-
-    zip_buffer = io.BytesIO()
-
-    with zipfile.ZipFile(
-        zip_buffer,
-        "w",
-        zipfile.ZIP_DEFLATED
-    ) as zip_file:
-
-        for file_path in output_directory.iterdir():
-
-            if file_path.is_file():
-
-                zip_file.write(
-                    file_path,
-                    arcname=file_path.name
-                )
-
-    zip_buffer.seek(0)
-
-    return StreamingResponse(
-        zip_buffer,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition":
-                'attachment; filename="SpatioraMap_Export.zip"'
-        }
-    )
