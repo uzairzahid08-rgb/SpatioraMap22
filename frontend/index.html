@@ -1,22 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>SpatioraMap</title>
 
-    <!-- Leaflet -->
+
+    <!-- ==================================================
+         LEAFLET
+    ================================================== -->
+
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     >
 
-    <!-- Leaflet Geoman -->
+
+    <!-- ==================================================
+         LEAFLET GEOMAN
+    ================================================== -->
+
     <link
         rel="stylesheet"
         href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.css"
     >
+
 
     <style>
 
@@ -24,513 +38,907 @@
             box-sizing: border-box;
         }
 
+
         html,
         body {
+
             margin: 0;
+
             padding: 0;
+
             width: 100%;
+
             height: 100%;
+
             overflow: hidden;
+
             font-family:
                 Inter,
                 Arial,
                 Helvetica,
                 sans-serif;
+
             background: #f8fafc;
+
             color: #172033;
         }
 
+
         #app {
+
             width: 100%;
+
             height: 100%;
+
             position: relative;
         }
+
 
         /* ==================================================
            SIDEBAR
         ================================================== */
 
         #sidebar {
+
             position: absolute;
+
             left: 0;
+
             top: 0;
+
             bottom: 0;
+
             width: 330px;
+
             min-width: 260px;
+
             max-width: 520px;
+
             background: #ffffff;
-            border-right: 1px solid #dce2ea;
+
+            border-right:
+                1px solid #dce2ea;
+
             z-index: 1000;
+
             display: flex;
+
             flex-direction: column;
+
             box-shadow:
-                2px 0 10px rgba(15, 23, 42, 0.08);
+                2px 0 10px
+                rgba(15, 23, 42, 0.08);
         }
 
+
         #resizeHandle {
+
             position: absolute;
+
             top: 0;
+
             right: -4px;
+
             width: 8px;
+
             height: 100%;
+
             cursor: col-resize;
+
             z-index: 2000;
         }
 
+
         #resizeHandle:hover {
+
             background:
                 rgba(59, 130, 246, 0.15);
         }
+
 
         /* ==================================================
            BRAND
         ================================================== */
 
         .brand {
-            padding: 18px 18px 15px 18px;
-            border-bottom: 1px solid #e5e9ef;
+
+            padding:
+                18px
+                18px
+                15px
+                18px;
+
+            border-bottom:
+                1px solid #e5e9ef;
         }
 
+
         .brand-title {
+
             font-size: 21px;
+
             font-weight: 700;
+
             color: #172033;
+
             letter-spacing: -0.3px;
         }
 
+
         .brand-subtitle {
+
             margin-top: 3px;
+
             font-size: 11px;
+
             color: #718096;
         }
+
 
         /* ==================================================
            DASHBOARD
         ================================================== */
 
         .dashboard {
+
             padding: 12px;
-            border-bottom: 1px solid #e5e9ef;
+
+            border-bottom:
+                1px solid #e5e9ef;
         }
 
+
         .dashboard-grid {
+
             display: grid;
-            grid-template-columns: 1fr 1fr;
+
+            grid-template-columns:
+                1fr 1fr;
+
             gap: 8px;
         }
 
+
         .stat-card {
-            border: 1px solid #e0e6ee;
+
+            border:
+                1px solid #e0e6ee;
+
             border-radius: 8px;
+
             padding: 10px;
+
             background: #fbfcfe;
         }
 
+
         .stat-label {
+
             font-size: 10px;
+
             color: #718096;
+
             margin-bottom: 4px;
         }
 
+
         .stat-value {
+
             font-size: 19px;
+
             font-weight: 700;
+
             color: #172033;
         }
+
 
         /* ==================================================
            FEATURES
         ================================================== */
 
         .features-section {
+
             flex: 1;
+
             min-height: 0;
+
             display: flex;
+
             flex-direction: column;
         }
 
+
         .section-header {
-            padding: 13px 12px 9px 12px;
+
+            padding:
+                13px
+                12px
+                9px
+                12px;
+
             font-size: 13px;
+
             font-weight: 700;
+
             color: #263449;
         }
 
+
         .filters {
-            padding: 0 12px 10px 12px;
+
+            padding:
+                0
+                12px
+                10px
+                12px;
         }
+
 
         .search-input,
         .filter-select {
+
             width: 100%;
+
             height: 34px;
-            border: 1px solid #d7dee8;
+
+            border:
+                1px solid #d7dee8;
+
             border-radius: 6px;
+
             background: #ffffff;
+
             color: #273449;
+
             padding: 0 9px;
+
             font-size: 12px;
+
             outline: none;
         }
 
+
         .search-input:focus,
         .filter-select:focus {
+
             border-color: #8ca7c7;
+
             box-shadow:
-                0 0 0 2px rgba(76, 110, 160, 0.08);
+                0 0 0 2px
+                rgba(76, 110, 160, 0.08);
         }
 
+
         .filter-row {
+
             display: grid;
-            grid-template-columns: 1fr 1fr;
+
+            grid-template-columns:
+                1fr 1fr;
+
             gap: 7px;
+
             margin-top: 7px;
         }
 
+
         #featureList {
+
             flex: 1;
+
             overflow-y: auto;
-            padding: 0 8px 10px 8px;
+
+            padding:
+                0
+                8px
+                10px
+                8px;
         }
 
+
         .feature-item {
-            border: 1px solid #e1e6ed;
+
+            border:
+                1px solid #e1e6ed;
+
             border-radius: 7px;
+
             padding: 9px;
+
             margin-bottom: 7px;
+
             background: #ffffff;
+
             cursor: pointer;
+
             transition: 0.15s ease;
         }
 
+
         .feature-item:hover {
+
             background: #f8fafc;
+
             border-color: #c8d2df;
         }
 
+
         .feature-name {
+
             font-size: 12px;
+
             font-weight: 700;
+
             color: #1f2c40;
         }
 
+
         .feature-meta {
+
             font-size: 10px;
+
             color: #718096;
+
             margin-top: 3px;
         }
 
+
         .feature-actions {
+
             display: flex;
+
             gap: 5px;
+
             margin-top: 8px;
         }
 
+
         .small-btn {
+
             flex: 1;
+
             height: 28px;
-            border: 1px solid #d7dee8;
+
+            border:
+                1px solid #d7dee8;
+
             border-radius: 5px;
+
             background: #ffffff;
+
             color: #344054;
+
             font-size: 10px;
+
             cursor: pointer;
         }
 
+
         .small-btn:hover {
+
             background: #f1f5f9;
         }
 
+
         .small-btn.delete:hover {
+
             background: #fff4f4;
+
             border-color: #e7b7b7;
+
             color: #b42318;
         }
 
+
         .empty-state {
+
             text-align: center;
+
             color: #8a94a6;
+
             font-size: 11px;
+
             padding: 25px 12px;
         }
+
 
         /* ==================================================
            FOOTER
         ================================================== */
 
         .sidebar-footer {
-            border-top: 1px solid #e5e9ef;
+
+            border-top:
+                1px solid #e5e9ef;
+
             padding: 10px;
         }
 
+
         .download-btn {
+
             width: 100%;
+
             height: 37px;
-            border: 1px solid #cbd5e1;
+
+            border:
+                1px solid #cbd5e1;
+
             border-radius: 6px;
+
             background: #172033;
+
             color: #ffffff;
+
             font-size: 12px;
+
             font-weight: 600;
+
             cursor: pointer;
         }
 
+
         .download-btn:hover {
+
             background: #263449;
         }
 
+
         .download-btn:disabled {
+
             opacity: 0.65;
+
             cursor: wait;
         }
+
 
         /* ==================================================
            MAP
         ================================================== */
 
         #map {
+
             position: absolute;
+
             top: 0;
+
             right: 0;
+
             bottom: 0;
+
             left: 330px;
+
             z-index: 1;
         }
+
 
         /* ==================================================
            DIGITIZING TOOLBAR
         ================================================== */
 
         .leaflet-pm-toolbar {
+
             background: #ffffff !important;
-            border: 1px solid #d8dee8 !important;
+
+            border:
+                1px solid #d8dee8 !important;
+
             border-radius: 9px !important;
+
             padding: 6px !important;
+
             box-shadow:
-                0 4px 14px rgba(15, 23, 42, 0.16) !important;
+                0 4px 14px
+                rgba(15, 23, 42, 0.16) !important;
+
             overflow: visible !important;
+
             width: 46px !important;
+
             min-width: 46px !important;
+
             transform: none !important;
         }
 
-        .leaflet-pm-toolbar .button-container {
+
+        .leaflet-pm-toolbar
+        .button-container {
+
             margin: 0 !important;
+
             padding: 0 !important;
+
             background: transparent !important;
+
             border: none !important;
+
             box-shadow: none !important;
+
             width: 100% !important;
         }
 
-        .leaflet-pm-toolbar .button-container a {
+
+        .leaflet-pm-toolbar
+        .button-container a {
+
             display: flex !important;
+
             align-items: center !important;
+
             justify-content: center !important;
+
             width: 34px !important;
+
             height: 34px !important;
-            margin: 0 auto 6px auto !important;
+
+            margin:
+                0
+                auto
+                6px
+                auto !important;
+
             padding: 0 !important;
+
             background: #ffffff !important;
-            border: 1px solid #d5dbe4 !important;
+
+            border:
+                1px solid #d5dbe4 !important;
+
             border-radius: 6px !important;
+
             box-shadow:
-                0 1px 3px rgba(15, 23, 42, 0.12) !important;
+                0 1px 3px
+                rgba(15, 23, 42, 0.12) !important;
+
             text-decoration: none !important;
+
             transition:
                 background 0.15s ease,
                 border-color 0.15s ease,
                 box-shadow 0.15s ease !important;
         }
 
-        .leaflet-pm-toolbar .button-container:last-child a {
+
+        .leaflet-pm-toolbar
+        .button-container:last-child a {
+
             margin-bottom: 0 !important;
         }
 
-        .leaflet-pm-toolbar .button-container a:hover {
+
+        .leaflet-pm-toolbar
+        .button-container a:hover {
+
             background: #f1f5f9 !important;
+
             border-color: #aebdce !important;
+
             box-shadow:
-                0 2px 6px rgba(15, 23, 42, 0.18) !important;
+                0 2px 6px
+                rgba(15, 23, 42, 0.18) !important;
         }
 
-        .leaflet-pm-toolbar .button-container a.active {
+
+        .leaflet-pm-toolbar
+        .button-container a.active {
+
             background: #e7eef7 !important;
+
             border-color: #7f9bbd !important;
         }
 
-        .leaflet-pm-toolbar .control-icon {
+
+        .leaflet-pm-toolbar
+        .control-icon {
+
             width: 32px !important;
+
             height: 32px !important;
+
             display: block !important;
-            background-color: transparent !important;
-            background-repeat: no-repeat !important;
-            background-position: center !important;
-            background-size: 20px 20px !important;
+
+            background-color:
+                transparent !important;
+
+            background-repeat:
+                no-repeat !important;
+
+            background-position:
+                center !important;
+
+            background-size:
+                20px 20px !important;
+
             border: none !important;
+
             box-shadow: none !important;
         }
+
 
         .leaflet-pm-toolbar
         .button-container
         a[class*="leaflet-pm-icon"] {
-            background-color: #ffffff !important;
+
+            background-color:
+                #ffffff !important;
         }
+
 
         /* ==================================================
            MODAL
         ================================================== */
 
         .modal-overlay {
+
             display: none;
+
             position: fixed;
+
             inset: 0;
+
             background:
                 rgba(15, 23, 42, 0.42);
+
             z-index: 5000;
+
             align-items: center;
+
             justify-content: center;
         }
 
+
         .modal-overlay.show {
+
             display: flex;
         }
 
+
         .modal {
+
             width: 420px;
-            max-width: calc(100vw - 30px);
+
+            max-width:
+                calc(100vw - 30px);
+
             background: #ffffff;
+
             border-radius: 10px;
+
             box-shadow:
-                0 18px 50px rgba(15, 23, 42, 0.25);
+                0 18px 50px
+                rgba(15, 23, 42, 0.25);
+
             overflow: hidden;
         }
 
+
         .modal-header {
-            padding: 15px 17px;
-            border-bottom: 1px solid #e5e9ef;
+
+            padding:
+                15px
+                17px;
+
+            border-bottom:
+                1px solid #e5e9ef;
+
             display: flex;
+
             align-items: center;
-            justify-content: space-between;
+
+            justify-content:
+                space-between;
         }
 
+
         .modal-title {
+
             font-size: 15px;
+
             font-weight: 700;
+
             color: #172033;
         }
 
+
         .modal-close {
+
             border: none;
+
             background: transparent;
+
             font-size: 21px;
+
             color: #667085;
+
             cursor: pointer;
         }
 
+
         .modal-body {
+
             padding: 16px;
         }
 
+
         .form-group {
+
             margin-bottom: 12px;
         }
 
+
         .form-label {
+
             display: block;
+
             font-size: 11px;
+
             font-weight: 600;
+
             color: #344054;
+
             margin-bottom: 5px;
         }
+
 
         .form-input,
         .form-select,
         .form-textarea {
+
             width: 100%;
-            border: 1px solid #d7dee8;
+
+            border:
+                1px solid #d7dee8;
+
             border-radius: 6px;
+
             background: #ffffff;
+
             padding: 9px;
+
             font-size: 12px;
+
             color: #172033;
+
             outline: none;
         }
+
 
         .form-input:focus,
         .form-select:focus,
         .form-textarea:focus {
+
             border-color: #8ca7c7;
+
             box-shadow:
-                0 0 0 2px rgba(76, 110, 160, 0.08);
+                0 0 0 2px
+                rgba(76, 110, 160, 0.08);
         }
 
+
         .form-textarea {
+
             min-height: 80px;
+
             resize: vertical;
         }
 
+
         .geometry-display {
+
             background: #f5f7fa;
-            border: 1px solid #e1e6ed;
+
+            border:
+                1px solid #e1e6ed;
+
             border-radius: 6px;
+
             padding: 9px;
+
             font-size: 11px;
+
             color: #667085;
         }
 
+
         .modal-footer {
-            padding: 12px 16px;
-            border-top: 1px solid #e5e9ef;
+
+            padding:
+                12px
+                16px;
+
+            border-top:
+                1px solid #e5e9ef;
+
             display: flex;
+
             justify-content: flex-end;
+
             gap: 7px;
         }
 
+
         .modal-btn {
+
             height: 34px;
-            padding: 0 14px;
+
+            padding:
+                0
+                14px;
+
             border-radius: 6px;
-            border: 1px solid #d7dee8;
+
+            border:
+                1px solid #d7dee8;
+
             background: #ffffff;
+
             color: #344054;
+
             font-size: 12px;
+
             cursor: pointer;
         }
 
+
         .modal-btn.primary {
+
             background: #172033;
+
             color: #ffffff;
+
             border-color: #172033;
         }
 
+
         .modal-btn.primary:hover {
+
             background: #263449;
         }
+
 
         /* ==================================================
            TOAST
         ================================================== */
 
         #toast {
+
             position: fixed;
+
             left: 50%;
+
             bottom: 25px;
-            transform: translateX(-50%);
+
+            transform:
+                translateX(-50%);
+
             background: #172033;
+
             color: #ffffff;
-            padding: 9px 15px;
+
+            padding:
+                9px
+                15px;
+
             border-radius: 6px;
+
             font-size: 11px;
+
             z-index: 6000;
+
             opacity: 0;
+
             pointer-events: none;
-            transition: opacity 0.2s ease;
+
+            transition:
+                opacity 0.2s ease;
         }
 
+
         #toast.show {
+
             opacity: 1;
         }
+
 
         /* ==================================================
            MOBILE
@@ -539,25 +947,36 @@
         @media (max-width: 700px) {
 
             #sidebar {
+
                 width: 285px;
+
                 min-width: 240px;
             }
 
+
             #map {
+
                 left: 285px;
             }
 
+
             .brand-title {
+
                 font-size: 18px;
             }
+
         }
 
     </style>
+
 </head>
+
 
 <body>
 
+
 <div id="app">
+
 
     <!-- ==================================================
          SIDEBAR
@@ -565,11 +984,13 @@
 
     <aside id="sidebar">
 
+
         <div class="brand">
 
             <div class="brand-title">
                 SpatioraMap
             </div>
+
 
             <div class="brand-subtitle">
                 Lightweight Web GIS Digitizing Platform
@@ -586,11 +1007,13 @@
 
             <div class="dashboard-grid">
 
+
                 <div class="stat-card">
 
                     <div class="stat-label">
                         Total Features
                     </div>
+
 
                     <div
                         class="stat-value"
@@ -608,6 +1031,7 @@
                         Points
                     </div>
 
+
                     <div
                         class="stat-value"
                         id="pointCount"
@@ -623,6 +1047,7 @@
                     <div class="stat-label">
                         Lines
                     </div>
+
 
                     <div
                         class="stat-value"
@@ -640,6 +1065,7 @@
                         Polygons
                     </div>
 
+
                     <div
                         class="stat-value"
                         id="polygonCount"
@@ -656,6 +1082,7 @@
                         Active
                     </div>
 
+
                     <div
                         class="stat-value"
                         id="activeCount"
@@ -671,6 +1098,7 @@
                     <div class="stat-label">
                         Inactive
                     </div>
+
 
                     <div
                         class="stat-value"
@@ -692,12 +1120,14 @@
 
         <div class="features-section">
 
+
             <div class="section-header">
                 My Features
             </div>
 
 
             <div class="filters">
+
 
                 <input
                     id="searchInput"
@@ -709,6 +1139,7 @@
 
                 <div class="filter-row">
 
+
                     <select
                         id="geometryFilter"
                         class="filter-select"
@@ -718,13 +1149,16 @@
                             All Geometry Types
                         </option>
 
+
                         <option value="Point">
                             Points
                         </option>
 
+
                         <option value="LineString">
                             Lines
                         </option>
+
 
                         <option value="Polygon">
                             Polygons
@@ -742,9 +1176,11 @@
                             All Status
                         </option>
 
+
                         <option value="Active">
                             Active
                         </option>
+
 
                         <option value="Inactive">
                             Inactive
@@ -767,6 +1203,7 @@
         ================================================== -->
 
         <div class="sidebar-footer">
+
 
             <button
                 id="downloadButton"
@@ -802,9 +1239,12 @@
     class="modal-overlay"
 >
 
+
     <div class="modal">
 
+
         <div class="modal-header">
+
 
             <div
                 id="modalTitle"
@@ -826,11 +1266,14 @@
 
         <div class="modal-body">
 
+
             <div class="form-group">
+
 
                 <label class="form-label">
                     Geometry Type
                 </label>
+
 
                 <div
                     id="geometryTypeDisplay"
@@ -844,12 +1287,14 @@
 
             <div class="form-group">
 
+
                 <label
                     class="form-label"
                     for="featureName"
                 >
                     Name
                 </label>
+
 
                 <input
                     id="featureName"
@@ -863,12 +1308,14 @@
 
             <div class="form-group">
 
+
                 <label
                     class="form-label"
                     for="assetType"
                 >
                     Type
                 </label>
+
 
                 <input
                     id="assetType"
@@ -882,12 +1329,14 @@
 
             <div class="form-group">
 
+
                 <label
                     class="form-label"
                     for="description"
                 >
                     Description
                 </label>
+
 
                 <textarea
                     id="description"
@@ -900,12 +1349,14 @@
 
             <div class="form-group">
 
+
                 <label
                     class="form-label"
                     for="status"
                 >
                     Status
                 </label>
+
 
                 <select
                     id="status"
@@ -915,6 +1366,7 @@
                     <option value="Active">
                         Active
                     </option>
+
 
                     <option value="Inactive">
                         Inactive
@@ -928,6 +1380,7 @@
 
 
         <div class="modal-footer">
+
 
             <button
                 class="modal-btn"
@@ -958,25 +1411,22 @@
      LIBRARIES
 ====================================================== -->
 
-<!-- Leaflet -->
+
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
 
 
-<!-- Leaflet Geoman -->
 <script
     src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js">
 </script>
 
 
-<!-- shp-write -->
 <script
     src="https://unpkg.com/shp-write@0.3.2/shpwrite.js">
 </script>
 
 
-<!-- JSZip -->
 <script
     src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js">
 </script>
@@ -984,23 +1434,27 @@
 
 <script>
 
+
     /* ======================================================
        MAP
     ====================================================== */
 
-    const map = L.map(
-        "map",
-        {
-            center: [
-                34.0151,
-                71.5249
-            ],
+    const map =
+        L.map(
+            "map",
+            {
 
-            zoom: 11,
+                center: [
+                    34.0151,
+                    71.5249
+                ],
 
-            zoomControl: true
-        }
-    );
+                zoom: 11,
+
+                zoomControl: true
+
+            }
+        );
 
 
     /* ======================================================
@@ -1011,10 +1465,12 @@
         L.tileLayer(
             "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
             {
+
                 maxZoom: 20,
 
                 attribution:
                     "&copy; OpenStreetMap contributors"
+
             }
         );
 
@@ -1023,10 +1479,12 @@
         L.tileLayer(
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             {
+
                 maxZoom: 20,
 
                 attribution:
                     "Tiles &copy; Esri"
+
             }
         );
 
@@ -1036,12 +1494,18 @@
 
     L.control.layers(
         {
+
             "OpenStreetMap": osm,
+
             "Satellite": satellite
+
         },
         null,
         {
-            position: "topright"
+
+            position:
+                "topright"
+
         }
     ).addTo(map);
 
@@ -1052,38 +1516,49 @@
 
     map.pm.addControls(
         {
-            position: "topleft",
 
-            drawMarker: true,
+            position:
+                "topleft",
 
-            drawPolyline: true,
+            drawMarker:
+                true,
 
-            drawPolygon: true,
+            drawPolyline:
+                true,
 
-            drawCircle: false,
+            drawPolygon:
+                true,
 
-            drawCircleMarker: false,
+            drawCircle:
+                false,
 
-            drawRectangle: false,
+            drawCircleMarker:
+                false,
 
-            drawText: false,
+            drawRectangle:
+                false,
 
-            editMode: false,
+            drawText:
+                false,
 
-            dragMode: false,
+            editMode:
+                false,
 
-            cutPolygon: false,
+            dragMode:
+                false,
 
-            removalMode: false
+            cutPolygon:
+                false,
+
+            removalMode:
+                false
+
         }
     );
 
 
     /* ======================================================
        LOCAL USER STORAGE
-       ------------------------------------------------------
-       No feature data is sent to the FastAPI server.
-       Every browser gets its own local data.
     ====================================================== */
 
     const STORAGE_KEY =
@@ -1092,11 +1567,18 @@
 
     let userFeatures = [];
 
-    let currentDrawingLayer = null;
 
-    let editingFeatureId = null;
+    let currentDrawingLayer =
+        null;
 
-    let editingLayer = null;
+
+    let editingFeatureId =
+        null;
+
+
+    let editingLayer =
+        null;
+
 
     let savedLayers = {};
 
@@ -1139,6 +1621,7 @@
             } else {
 
                 userFeatures = [];
+
             }
 
         } catch (error) {
@@ -1149,7 +1632,9 @@
             );
 
             userFeatures = [];
+
         }
+
     }
 
 
@@ -1183,6 +1668,7 @@
 
             return false;
         }
+
     }
 
 
@@ -1210,6 +1696,7 @@
 
 
         savedLayers = {};
+
     }
 
 
@@ -1249,7 +1736,9 @@
 
                         status:
                             feature.status
+
                     }
+
                 };
 
 
@@ -1267,12 +1756,16 @@
                                     return L.circleMarker(
                                         latlng,
                                         {
-                                            radius: 7,
 
-                                            weight: 2,
+                                            radius:
+                                                7,
+
+                                            weight:
+                                                2,
 
                                             fillOpacity:
                                                 0.85
+
                                         }
                                     );
 
@@ -1291,6 +1784,7 @@
 
                                     layer.bindPopup(
                                         `
+
                                         <div
                                             style="min-width:180px"
                                         >
@@ -1333,6 +1827,7 @@
                                                 p.description
                                                 ?
                                                 `
+
                                                 <br>
 
                                                 <span>
@@ -1340,12 +1835,14 @@
                                                         p.description
                                                     )}
                                                 </span>
+
                                                 `
                                                 :
                                                 ""
                                             }
 
                                         </div>
+
                                         `
                                     );
 
@@ -1369,10 +1866,13 @@
                                                 map.fitBounds(
                                                     layer.getBounds(),
                                                     {
+
                                                         padding:
                                                             [30, 30]
+
                                                     }
                                                 );
+
                                             }
 
                                         }
@@ -1395,6 +1895,7 @@
         updateDashboard();
 
         applyFilters();
+
     }
 
 
@@ -1432,6 +1933,7 @@
             editingFeatureId =
                 null;
 
+
             editingLayer =
                 null;
 
@@ -1453,7 +1955,9 @@
     ) {
 
         if (!layer) {
+
             return null;
+
         }
 
 
@@ -1473,7 +1977,9 @@
             );
 
             return null;
+
         }
+
     }
 
 
@@ -1518,7 +2024,8 @@
                     "featureName"
                 )
                 .value =
-                feature.name || "";
+                feature.name ||
+                "";
 
 
             document
@@ -1526,7 +2033,8 @@
                     "assetType"
                 )
                 .value =
-                feature.asset_type || "";
+                feature.asset_type ||
+                "";
 
 
             document
@@ -1534,7 +2042,8 @@
                     "description"
                 )
                 .value =
-                feature.description || "";
+                feature.description ||
+                "";
 
 
             document
@@ -1585,7 +2094,9 @@
                 )
                 .value =
                 "Active";
+
         }
+
     }
 
 
@@ -1602,6 +2113,7 @@
             .classList.remove(
                 "show"
             );
+
     }
 
 
@@ -1619,14 +2131,17 @@
             map.removeLayer(
                 currentDrawingLayer
             );
+
         }
 
 
         currentDrawingLayer =
             null;
 
+
         editingFeatureId =
             null;
+
 
         editingLayer =
             null;
@@ -1635,6 +2150,7 @@
         disableEditMode();
 
         closeModal();
+
     }
 
 
@@ -1686,6 +2202,7 @@
             );
 
             return;
+
         }
 
 
@@ -1714,6 +2231,7 @@
                 closeModal();
 
                 return;
+
             }
 
 
@@ -1733,7 +2251,9 @@
 
                     geometry =
                         updatedGeometry;
+
                 }
+
             }
 
 
@@ -1773,8 +2293,10 @@
             currentDrawingLayer =
                 null;
 
+
             editingFeatureId =
                 null;
+
 
             editingLayer =
                 null;
@@ -1786,6 +2308,7 @@
 
 
             return;
+
         }
 
 
@@ -1800,6 +2323,7 @@
             );
 
             return;
+
         }
 
 
@@ -1816,6 +2340,7 @@
             );
 
             return;
+
         }
 
 
@@ -1878,6 +2403,7 @@
         showToast(
             "Feature saved locally."
         );
+
     }
 
 
@@ -1895,7 +2421,9 @@
 
 
         if (!feature) {
+
             return;
+
         }
 
 
@@ -1904,7 +2432,9 @@
 
 
         if (!layer) {
+
             return;
+
         }
 
 
@@ -1939,6 +2469,7 @@
             editableLayer =
                 layers[0] ||
                 null;
+
         }
 
 
@@ -1949,6 +2480,7 @@
             );
 
             return;
+
         }
 
 
@@ -1974,6 +2506,7 @@
             feature.geometry_type,
             feature
         );
+
     }
 
 
@@ -1988,6 +2521,7 @@
             map.pm.disableGlobalEditMode();
 
         } catch (error) {}
+
     }
 
 
@@ -2005,7 +2539,9 @@
 
 
         if (!feature) {
+
             return;
+
         }
 
 
@@ -2016,7 +2552,9 @@
 
 
         if (!confirmed) {
+
             return;
+
         }
 
 
@@ -2035,6 +2573,7 @@
         showToast(
             "Feature deleted."
         );
+
     }
 
 
@@ -2060,12 +2599,15 @@
 
             container.innerHTML =
                 `
+
                 <div class="empty-state">
                     No features found.
                 </div>
+
                 `;
 
             return;
+
         }
 
 
@@ -2086,13 +2628,16 @@
                     `
 
                     <div class="feature-name">
+
                         ${escapeHtml(
                             feature.name
                         )}
+
                     </div>
 
 
                     <div class="feature-meta">
+
                         ${escapeHtml(
                             feature.asset_type ||
                             "No type"
@@ -2109,6 +2654,7 @@
                         ${escapeHtml(
                             feature.status
                         )}
+
                     </div>
 
 
@@ -2116,11 +2662,15 @@
                         feature.description
                         ?
                         `
+
                         <div class="feature-meta">
+
                             ${escapeHtml(
                                 feature.description
                             )}
+
                         </div>
+
                         `
                         :
                         ""
@@ -2128,6 +2678,7 @@
 
 
                     <div class="feature-actions">
+
 
                         <button
                             class="small-btn"
@@ -2163,7 +2714,7 @@
 
                     </div>
 
-                `;
+                    `;
 
 
                 item.addEventListener(
@@ -2184,6 +2735,7 @@
 
             }
         );
+
     }
 
 
@@ -2198,7 +2750,9 @@
 
 
         if (!layer) {
+
             return;
+
         }
 
 
@@ -2212,8 +2766,10 @@
                 map.fitBounds(
                     layer.getBounds(),
                     {
+
                         padding:
                             [40, 40]
+
                     }
                 );
 
@@ -2233,6 +2789,7 @@
             console.error(
                 error
             );
+
         }
 
 
@@ -2241,6 +2798,7 @@
             layer.openPopup();
 
         } catch (error) {}
+
     }
 
 
@@ -2282,11 +2840,17 @@
 
                     const searchText =
                         [
+
                             feature.name,
+
                             feature.asset_type,
+
                             feature.description,
+
                             feature.geometry_type,
+
                             feature.status
+
                         ]
                         .join(" ")
                         .toLowerCase();
@@ -2316,6 +2880,7 @@
                         matchesGeometry &&
                         matchesStatus
                     );
+
                 }
             );
 
@@ -2323,6 +2888,7 @@
         renderFeatureList(
             filtered
         );
+
     }
 
 
@@ -2365,14 +2931,18 @@
         let points =
             0;
 
+
         let lines =
             0;
+
 
         let polygons =
             0;
 
+
         let active =
             0;
+
 
         let inactive =
             0;
@@ -2388,19 +2958,24 @@
 
                     points++;
 
-                } else if (
+                }
+
+                else if (
                     feature.geometry_type ===
                     "LineString"
                 ) {
 
                     lines++;
 
-                } else if (
+                }
+
+                else if (
                     feature.geometry_type ===
                     "Polygon"
                 ) {
 
                     polygons++;
+
                 }
 
 
@@ -2411,12 +2986,15 @@
 
                     active++;
 
-                } else if (
+                }
+
+                else if (
                     feature.status ===
                     "Inactive"
                 ) {
 
                     inactive++;
+
                 }
 
             }
@@ -2469,11 +3047,15 @@
             )
             .textContent =
             inactive;
+
     }
 
 
     /* ======================================================
        DOWNLOAD
+       ------------------------------------------------------
+       Browser-local export.
+       No feature data is sent to FastAPI.
     ====================================================== */
 
     async function downloadData() {
@@ -2510,6 +3092,39 @@
 
         try {
 
+
+            /* ==============================================
+               CHECK REQUIRED LIBRARIES
+            ============================================== */
+
+            if (
+                typeof shpwrite ===
+                "undefined"
+            ) {
+
+                throw new Error(
+                    "shp-write library is not available."
+                );
+
+            }
+
+
+            if (
+                typeof JSZip ===
+                "undefined"
+            ) {
+
+                throw new Error(
+                    "JSZip library is not available."
+                );
+
+            }
+
+
+            /* ==============================================
+               TIMESTAMP
+            ============================================== */
+
             const timestamp =
                 new Date()
                     .toISOString()
@@ -2518,6 +3133,10 @@
                         "-"
                     );
 
+
+            /* ==============================================
+               FEATURE COLLECTIONS
+            ============================================== */
 
             const pointFeatures =
                 [];
@@ -2534,6 +3153,15 @@
             userFeatures.forEach(
                 feature => {
 
+                    if (
+                        !feature.geometry
+                    ) {
+
+                        return;
+
+                    }
+
+
                     const geojsonFeature = {
 
                         type:
@@ -2545,23 +3173,43 @@
                         properties: {
 
                             ID:
-                                feature.id,
+                                String(
+                                    feature.id ??
+                                    ""
+                                ),
 
                             NAME:
-                                feature.name,
+                                String(
+                                    feature.name ??
+                                    ""
+                                ),
 
                             TYPE:
-                                feature.asset_type,
+                                String(
+                                    feature.asset_type ??
+                                    ""
+                                ),
 
                             DESCRIPTION:
-                                feature.description,
+                                String(
+                                    feature.description ??
+                                    ""
+                                ),
 
                             STATUS:
-                                feature.status,
+                                String(
+                                    feature.status ??
+                                    ""
+                                ),
 
                             CREATED:
-                                feature.created_at
+                                String(
+                                    feature.created_at ??
+                                    ""
+                                )
+
                         }
+
                     };
 
 
@@ -2574,7 +3222,10 @@
                             geojsonFeature
                         );
 
-                    } else if (
+                    }
+
+
+                    else if (
                         feature.geometry_type ===
                         "LineString"
                     ) {
@@ -2583,7 +3234,10 @@
                             geojsonFeature
                         );
 
-                    } else if (
+                    }
+
+
+                    else if (
                         feature.geometry_type ===
                         "Polygon"
                     ) {
@@ -2591,142 +3245,165 @@
                         polygonFeatures.push(
                             geojsonFeature
                         );
+
                     }
 
                 }
             );
 
 
-            const zip =
+            /* ==============================================
+               FINAL ZIP
+            ============================================== */
+
+            const finalZip =
                 new JSZip();
 
 
-            /* ==================================================
+            /* ==============================================
                POINTS
-            ================================================== */
+            ============================================== */
 
             if (
-                pointFeatures.length
+                pointFeatures.length > 0
             ) {
 
-                const geojson = {
+                const pointCollection = {
 
                     type:
                         "FeatureCollection",
 
                     features:
                         pointFeatures
+
                 };
 
 
-                const generated =
+                const pointZip =
                     shpwrite.zip(
-                        geojson,
+                        pointCollection,
                         {
+
                             folder:
                                 "points",
 
                             types: {
+
                                 point:
                                     "points"
+
                             }
+
                         }
                     );
 
 
-                await addShpZipToZip(
-                    zip,
-                    generated,
+                await addGeneratedZipFiles(
+                    finalZip,
+                    pointZip,
                     "points"
                 );
+
             }
 
 
-            /* ==================================================
+            /* ==============================================
                LINES
-            ================================================== */
+            ============================================== */
 
             if (
-                lineFeatures.length
+                lineFeatures.length > 0
             ) {
 
-                const geojson = {
+                const lineCollection = {
 
                     type:
                         "FeatureCollection",
 
                     features:
                         lineFeatures
+
                 };
 
 
-                const generated =
+                const lineZip =
                     shpwrite.zip(
-                        geojson,
+                        lineCollection,
                         {
+
                             folder:
                                 "lines",
 
                             types: {
+
                                 line:
                                     "lines"
+
                             }
+
                         }
                     );
 
 
-                await addShpZipToZip(
-                    zip,
-                    generated,
+                await addGeneratedZipFiles(
+                    finalZip,
+                    lineZip,
                     "lines"
                 );
+
             }
 
 
-            /* ==================================================
+            /* ==============================================
                POLYGONS
-            ================================================== */
+            ============================================== */
 
             if (
-                polygonFeatures.length
+                polygonFeatures.length > 0
             ) {
 
-                const geojson = {
+                const polygonCollection = {
 
                     type:
                         "FeatureCollection",
 
                     features:
                         polygonFeatures
+
                 };
 
 
-                const generated =
+                const polygonZip =
                     shpwrite.zip(
-                        geojson,
+                        polygonCollection,
                         {
+
                             folder:
                                 "polygons",
 
                             types: {
+
                                 polygon:
                                     "polygons"
+
                             }
+
                         }
                     );
 
 
-                await addShpZipToZip(
-                    zip,
-                    generated,
+                await addGeneratedZipFiles(
+                    finalZip,
+                    polygonZip,
                     "polygons"
                 );
+
             }
 
 
-            /* ==================================================
+            /* ==============================================
                CSV
-            ================================================== */
+            ============================================== */
 
             const csv =
                 createCSV(
@@ -2734,24 +3411,49 @@
                 );
 
 
-            zip.file(
+            finalZip.file(
                 "all_attributes.csv",
                 csv
             );
 
 
-            /* ==================================================
+            /* ==============================================
                GENERATE ZIP
-            ================================================== */
+            ============================================== */
 
             const blob =
-                await zip.generateAsync(
+                await finalZip.generateAsync(
                     {
+
                         type:
-                            "blob"
+                            "blob",
+
+                        compression:
+                            "DEFLATE",
+
+                        compressionOptions: {
+
+                            level:
+                                6
+
+                        }
+
                     }
                 );
 
+
+            if (!blob || blob.size === 0) {
+
+                throw new Error(
+                    "Generated ZIP is empty."
+                );
+
+            }
+
+
+            /* ==============================================
+               DOWNLOAD FILE
+            ============================================== */
 
             const url =
                 URL.createObjectURL(
@@ -2773,6 +3475,10 @@
                 `SpatioraMap_Export_${timestamp}.zip`;
 
 
+            anchor.style.display =
+                "none";
+
+
             document
                 .body
                 .appendChild(
@@ -2783,7 +3489,11 @@
             anchor.click();
 
 
-            anchor.remove();
+            document
+                .body
+                .removeChild(
+                    anchor
+                );
 
 
             setTimeout(
@@ -2794,13 +3504,14 @@
                     );
 
                 },
-                1000
+                3000
             );
 
 
             showToast(
-                "Download ready."
+                "Download completed successfully."
             );
+
 
         } catch (error) {
 
@@ -2814,6 +3525,7 @@
                 "Download failed. Please try again."
             );
 
+
         } finally {
 
             button.disabled =
@@ -2822,49 +3534,53 @@
 
             button.textContent =
                 originalText;
+
         }
+
     }
 
 
     /* ======================================================
-       ADD SHP ZIP CONTENT
+       ADD GENERATED SHP ZIP FILES
     ====================================================== */
 
-    async function addShpZipToZip(
+    async function addGeneratedZipFiles(
         destinationZip,
         generatedZip,
         folderName
     ) {
 
-        let blob;
+        let sourceZip;
 
+
+        /* ==============================================
+           HANDLE BLOB
+        ============================================== */
 
         if (
             generatedZip instanceof Blob
         ) {
 
-            blob =
-                generatedZip;
-
-        } else {
-
-            blob =
-                new Blob(
-                    [
-                        generatedZip
-                    ],
-                    {
-                        type:
-                            "application/zip"
-                    }
+            sourceZip =
+                await JSZip.loadAsync(
+                    generatedZip
                 );
+
         }
 
 
-        const sourceZip =
-            await JSZip.loadAsync(
-                blob
-            );
+        /* ==============================================
+           HANDLE ARRAYBUFFER / UINT8ARRAY
+        ============================================== */
+
+        else {
+
+            sourceZip =
+                await JSZip.loadAsync(
+                    generatedZip
+                );
+
+        }
 
 
         const entries =
@@ -2889,6 +3605,7 @@
             ) {
 
                 continue;
+
             }
 
 
@@ -2904,11 +3621,20 @@
                     .pop();
 
 
+            if (!cleanName) {
+
+                continue;
+
+            }
+
+
             destinationZip.file(
                 `${folderName}/${cleanName}`,
                 content
             );
+
         }
+
     }
 
 
@@ -2923,11 +3649,17 @@
         const headers = [
 
             "id",
+
             "name",
+
             "asset_type",
+
             "description",
+
             "status",
+
             "geometry_type",
+
             "created_at"
 
         ];
@@ -2987,6 +3719,7 @@
         return rows.join(
             "\r\n"
         );
+
     }
 
 
@@ -3004,6 +3737,7 @@
             /"/g,
             '""'
         )}"`;
+
     }
 
 
@@ -3050,6 +3784,7 @@
                 },
                 2500
             );
+
     }
 
 
@@ -3060,6 +3795,7 @@
     function closeAllPopups() {
 
         map.closePopup();
+
     }
 
 
@@ -3082,6 +3818,7 @@
 
 
         return div.innerHTML;
+
     }
 
 
@@ -3122,6 +3859,7 @@
 
             document.body.style.userSelect =
                 "none";
+
         }
     );
 
@@ -3131,7 +3869,9 @@
         function(event) {
 
             if (!resizing) {
+
                 return;
+
             }
 
 
@@ -3145,6 +3885,7 @@
 
                 width =
                     260;
+
             }
 
 
@@ -3154,6 +3895,7 @@
 
                 width =
                     520;
+
             }
 
 
@@ -3166,6 +3908,7 @@
 
 
             map.invalidateSize();
+
         }
     );
 
@@ -3175,7 +3918,9 @@
         function() {
 
             if (!resizing) {
+
                 return;
+
             }
 
 
@@ -3192,6 +3937,7 @@
 
 
             map.invalidateSize();
+
         }
     );
 
@@ -3214,7 +3960,9 @@
                 ) {
 
                     cancelDrawing();
+
                 }
+
             }
         );
 
@@ -3228,6 +3976,7 @@
     renderFeatures();
 
 </script>
+
 
 </body>
 </html>
